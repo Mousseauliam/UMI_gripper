@@ -1,0 +1,9 @@
+aiohttp==3.14.5
+mcap==1.6.0
+zstandard
+lz4
+pyarrow==26.0.0
+numpy
+Pillow
+pyserial
+av>=14

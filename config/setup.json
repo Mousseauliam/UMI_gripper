@@ -1,0 +1,705 @@
+{
+  "catalog": {
+    "schema": "origin_teleop_catalog/1",
+    "updated": "2026-11-02T15:30:04Z",
+    "present": true,
+    "tools": [
+      {
+        "id": "LIB-cleaning_tool",
+        "name": "Cleaning tool (knob + pad)"
+      },
+      {
+        "id": "LIB-ycb_banana",
+        "name": "Banana"
+      },
+      {
+        "id": "LIB-mj_banana",
+        "name": "Banana (MuJoCo, three capsules)"
+      },
+      {
+        "id": "LIB-hot3d_bbq_bottle",
+        "name": "BBQ sauce bottle"
+      },
+      {
+        "id": "LIB-office_biscuit_jar",
+        "name": "Biscuit jar"
+      },
+      {
+        "id": "LIB-prim_box_big",
+        "name": "Box, big (8 colours)"
+      },
+      {
+        "id": "LIB-prim_box_small",
+        "name": "Box, small (8 colours)"
+      },
+      {
+        "id": "LIB-office_coffee_machine",
+        "name": "Coffee machine"
+      },
+      {
+        "id": "LIB-office_cup",
+        "name": "Cup"
+      },
+      {
+        "id": "LIB-prim_cylinder_big",
+        "name": "Cylinder, big (8 colours)"
+      },
+      {
+        "id": "LIB-prim_cylinder_small",
+        "name": "Cylinder, small (8 colours)"
+      },
+      {
+        "id": "LIB-ycb_foam_brick",
+        "name": "Foam brick"
+      },
+      {
+        "id": "LIB-office_folding_panel_stand",
+        "name": "Folding panel stand"
+      },
+      {
+        "id": "LIB-ycb_gelatin_box",
+        "name": "Gelatin box"
+      },
+      {
+        "id": "LIB-hall_phone",
+        "name": "iPhone (scan)"
+      },
+      {
+        "id": "LIB-office_kettle",
+        "name": "Kettle"
+      },
+      {
+        "id": "LIB-office_kitchen_waste_bin",
+        "name": "Kitchen waste bin"
+      },
+      {
+        "id": "LIB-hall_water_bottle",
+        "name": "Masafi water bottle (scan)"
+      },
+      {
+        "id": "LIB-ycb_master_chef_can",
+        "name": "Master Chef coffee can"
+      },
+      {
+        "id": "LIB-ycb_mug",
+        "name": "Mug"
+      },
+      {
+        "id": "LIB-ycb_mustard_bottle",
+        "name": "Mustard bottle"
+      },
+      {
+        "id": "LIB-hall_paper_ball",
+        "name": "Paper ball (scan)"
+      },
+      {
+        "id": "LIB-office_paper_towel_roll",
+        "name": "Paper towel roll"
+      },
+      {
+        "id": "LIB-hall_drink_can",
+        "name": "Pepsi can (scan)"
+      },
+      {
+        "id": "LIB-robotis_water_bottle",
+        "name": "Plastic water bottle (ROBOTIS)"
+      },
+      {
+        "id": "LIB-mj_plate",
+        "name": "Plate (MuJoCo)"
+      },
+      {
+        "id": "LIB-ycb_potted_meat_can",
+        "name": "Potted meat can"
+      },
+      {
+        "id": "LIB-prim_puck",
+        "name": "Puck (8 colours)"
+      },
+      {
+        "id": "LIB-ycb_pudding_box",
+        "name": "Pudding box"
+      },
+      {
+        "id": "LIB-hall_paper_cup",
+        "name": "Starbucks cup (scan)"
+      },
+      {
+        "id": "LIB-ycb_sugar_box",
+        "name": "Sugar box"
+      },
+      {
+        "id": "LIB-office_tea_and_coffee_capsule_tray",
+        "name": "Tea and coffee capsule tray"
+      },
+      {
+        "id": "LIB-ycb_tomato_soup_can",
+        "name": "Tomato soup can"
+      },
+      {
+        "id": "LIB-ycb_tuna_can",
+        "name": "Tuna can"
+      },
+      {
+        "id": "LIB-office_water_dispenser_with_paper_cups",
+        "name": "Water dispenser with paper cups"
+      },
+      {
+        "id": "LIB-ycb_wood_block",
+        "name": "Wood block"
+      },
+      {
+        "id": "LIB-office_armchair_blue_with_throw_cushion",
+        "name": "Armchair (blue, with throw cushion)"
+      },
+      {
+        "id": "LIB-hall_planter",
+        "name": "Bamboo planter"
+      },
+      {
+        "id": "LIB-office_bar_stool_brushed_metal_dish_seat",
+        "name": "Bar stool (brushed metal dish seat)"
+      },
+      {
+        "id": "LIB-mj_bin",
+        "name": "Bin (MuJoCo)"
+      },
+      {
+        "id": "LIB-hall_blue_cabinet",
+        "name": "Blue cabinet"
+      },
+      {
+        "id": "LIB-office_console_plants_three_pots",
+        "name": "Console plants (three pots)"
+      },
+      {
+        "id": "LIB-office_crossed_timber_sculpture_x_on_plinth",
+        "name": "Crossed timber sculpture (X) on plinth"
+      },
+      {
+        "id": "LIB-hall_chair_lime",
+        "name": "Dining chair, lime"
+      },
+      {
+        "id": "LIB-hall_chair_red",
+        "name": "Dining chair, red"
+      },
+      {
+        "id": "LIB-hall_chair_tan",
+        "name": "Dining chair, tan"
+      },
+      {
+        "id": "LIB-hall_chair_teal",
+        "name": "Dining chair, teal"
+      },
+      {
+        "id": "LIB-hall_chair_yellow",
+        "name": "Dining chair, yellow"
+      },
+      {
+        "id": "LIB-hall_dining_table",
+        "name": "Dining table (5.4 m row)"
+      },
+      {
+        "id": "LIB-hall_foosball",
+        "name": "Foosball table"
+      },
+      {
+        "id": "LIB-isaac_tote",
+        "name": "Grey tote / sorting bin"
+      },
+      {
+        "id": "LIB-office_kitchen_plant",
+        "name": "Kitchen plant"
+      },
+      {
+        "id": "LIB-office_kitchen_run_with_raised_bar",
+        "name": "Kitchen run with raised bar"
+      },
+      {
+        "id": "LIB-isaac_table",
+        "name": "Lab table (black top, metal legs)"
+      },
+      {
+        "id": "LIB-hall_lockers",
+        "name": "Locker bank"
+      },
+      {
+        "id": "LIB-office_lounge_chair_tan_seat",
+        "name": "Lounge chair (tan seat)"
+      },
+      {
+        "id": "LIB-hall_sofa",
+        "name": "Lounge sofa"
+      },
+      {
+        "id": "LIB-hall_microwave",
+        "name": "Microwave (hinged door)"
+      },
+      {
+        "id": "LIB-hall_microwave_cabinet",
+        "name": "Microwave cabinet (wood)"
+      },
+      {
+        "id": "LIB-office_niche_plant",
+        "name": "Niche plant"
+      },
+      {
+        "id": "LIB-office_oak_feature_wall_panels",
+        "name": "Oak feature wall panels"
+      },
+      {
+        "id": "LIB-office_oval_limestone_coffee_table_with_ceramic_stools",
+        "name": "Oval limestone coffee table with ceramic stools"
+      },
+      {
+        "id": "LIB-hall_reception_counter",
+        "name": "Reception counter"
+      },
+      {
+        "id": "LIB-hall_trash_bin_black",
+        "name": "Recycling bin, black (general)"
+      },
+      {
+        "id": "LIB-hall_trash_bin_blue",
+        "name": "Recycling bin, blue (recycling)"
+      },
+      {
+        "id": "LIB-hall_trash_bin_green",
+        "name": "Recycling bin, green (organic)"
+      },
+      {
+        "id": "LIB-hall_roll_cage",
+        "name": "Roll cage"
+      },
+      {
+        "id": "LIB-office_sculpted_ceramic_stool",
+        "name": "Sculpted ceramic stool"
+      },
+      {
+        "id": "LIB-hall_bin",
+        "name": "Service bin"
+      },
+      {
+        "id": "LIB-mj_table",
+        "name": "Table (MuJoCo table scene)"
+      },
+      {
+        "id": "LIB-hall_table_tennis",
+        "name": "Table tennis table"
+      },
+      {
+        "id": "LIB-office_three_seat_sofa_blue",
+        "name": "Three-seat sofa (blue)"
+      },
+      {
+        "id": "LIB-office_tv_wall_with_floating_console",
+        "name": "TV wall with floating console"
+      }
+    ],
+    "objects": [
+      {
+        "id": "LIB-ycb_banana",
+        "name": "Banana"
+      },
+      {
+        "id": "LIB-mj_banana",
+        "name": "Banana (MuJoCo, three capsules)"
+      },
+      {
+        "id": "LIB-hot3d_bbq_bottle",
+        "name": "BBQ sauce bottle"
+      },
+      {
+        "id": "LIB-office_biscuit_jar",
+        "name": "Biscuit jar"
+      },
+      {
+        "id": "LIB-prim_box_big",
+        "name": "Box, big (8 colours)"
+      },
+      {
+        "id": "LIB-prim_box_small",
+        "name": "Box, small (8 colours)"
+      },
+      {
+        "id": "LIB-office_coffee_machine",
+        "name": "Coffee machine"
+      },
+      {
+        "id": "LIB-office_cup",
+        "name": "Cup"
+      },
+      {
+        "id": "LIB-prim_cylinder_big",
+        "name": "Cylinder, big (8 colours)"
+      },
+      {
+        "id": "LIB-prim_cylinder_small",
+        "name": "Cylinder, small (8 colours)"
+      },
+      {
+        "id": "LIB-ycb_foam_brick",
+        "name": "Foam brick"
+      },
+      {
+        "id": "LIB-office_folding_panel_stand",
+        "name": "Folding panel stand"
+      },
+      {
+        "id": "LIB-ycb_gelatin_box",
+        "name": "Gelatin box"
+      },
+      {
+        "id": "LIB-hall_phone",
+        "name": "iPhone (scan)"
+      },
+      {
+        "id": "LIB-office_kettle",
+        "name": "Kettle"
+      },
+      {
+        "id": "LIB-office_kitchen_waste_bin",
+        "name": "Kitchen waste bin"
+      },
+      {
+        "id": "LIB-hall_water_bottle",
+        "name": "Masafi water bottle (scan)"
+      },
+      {
+        "id": "LIB-ycb_master_chef_can",
+        "name": "Master Chef coffee can"
+      },
+      {
+        "id": "LIB-ycb_mug",
+        "name": "Mug"
+      },
+      {
+        "id": "LIB-ycb_mustard_bottle",
+        "name": "Mustard bottle"
+      },
+      {
+        "id": "LIB-hall_paper_ball",
+        "name": "Paper ball (scan)"
+      },
+      {
+        "id": "LIB-office_paper_towel_roll",
+        "name": "Paper towel roll"
+      },
+      {
+        "id": "LIB-hall_drink_can",
+        "name": "Pepsi can (scan)"
+      },
+      {
+        "id": "LIB-robotis_water_bottle",
+        "name": "Plastic water bottle (ROBOTIS)"
+      },
+      {
+        "id": "LIB-mj_plate",
+        "name": "Plate (MuJoCo)"
+      },
+      {
+        "id": "LIB-ycb_potted_meat_can",
+        "name": "Potted meat can"
+      },
+      {
+        "id": "LIB-prim_puck",
+        "name": "Puck (8 colours)"
+      },
+      {
+        "id": "LIB-ycb_pudding_box",
+        "name": "Pudding box"
+      },
+      {
+        "id": "LIB-hall_paper_cup",
+        "name": "Starbucks cup (scan)"
+      },
+      {
+        "id": "LIB-ycb_sugar_box",
+        "name": "Sugar box"
+      },
+      {
+        "id": "LIB-office_tea_and_coffee_capsule_tray",
+        "name": "Tea and coffee capsule tray"
+      },
+      {
+        "id": "LIB-ycb_tomato_soup_can",
+        "name": "Tomato soup can"
+      },
+      {
+        "id": "LIB-ycb_tuna_can",
+        "name": "Tuna can"
+      },
+      {
+        "id": "LIB-office_water_dispenser_with_paper_cups",
+        "name": "Water dispenser with paper cups"
+      },
+      {
+        "id": "LIB-ycb_wood_block",
+        "name": "Wood block"
+      },
+      {
+        "id": "LIB-office_armchair_blue_with_throw_cushion",
+        "name": "Armchair (blue, with throw cushion)"
+      },
+      {
+        "id": "LIB-hall_planter",
+        "name": "Bamboo planter"
+      },
+      {
+        "id": "LIB-office_bar_stool_brushed_metal_dish_seat",
+        "name": "Bar stool (brushed metal dish seat)"
+      },
+      {
+        "id": "LIB-mj_bin",
+        "name": "Bin (MuJoCo)"
+      },
+      {
+        "id": "LIB-hall_blue_cabinet",
+        "name": "Blue cabinet"
+      },
+      {
+        "id": "LIB-office_console_plants_three_pots",
+        "name": "Console plants (three pots)"
+      },
+      {
+        "id": "LIB-office_crossed_timber_sculpture_x_on_plinth",
+        "name": "Crossed timber sculpture (X) on plinth"
+      },
+      {
+        "id": "LIB-hall_chair_lime",
+        "name": "Dining chair, lime"
+      },
+      {
+        "id": "LIB-hall_chair_red",
+        "name": "Dining chair, red"
+      },
+      {
+        "id": "LIB-hall_chair_tan",
+        "name": "Dining chair, tan"
+      },
+      {
+        "id": "LIB-hall_chair_teal",
+        "name": "Dining chair, teal"
+      },
+      {
+        "id": "LIB-hall_chair_yellow",
+        "name": "Dining chair, yellow"
+      },
+      {
+        "id": "LIB-hall_dining_table",
+        "name": "Dining table (5.4 m row)"
+      },
+      {
+        "id": "LIB-hall_foosball",
+        "name": "Foosball table"
+      },
+      {
+        "id": "LIB-isaac_tote",
+        "name": "Grey tote / sorting bin"
+      },
+      {
+        "id": "LIB-office_kitchen_plant",
+        "name": "Kitchen plant"
+      },
+      {
+        "id": "LIB-office_kitchen_run_with_raised_bar",
+        "name": "Kitchen run with raised bar"
+      },
+      {
+        "id": "LIB-isaac_table",
+        "name": "Lab table (black top, metal legs)"
+      },
+      {
+        "id": "LIB-hall_lockers",
+        "name": "Locker bank"
+      },
+      {
+        "id": "LIB-office_lounge_chair_tan_seat",
+        "name": "Lounge chair (tan seat)"
+      },
+      {
+        "id": "LIB-hall_sofa",
+        "name": "Lounge sofa"
+      },
+      {
+        "id": "LIB-hall_microwave",
+        "name": "Microwave (hinged door)"
+      },
+      {
+        "id": "LIB-hall_microwave_cabinet",
+        "name": "Microwave cabinet (wood)"
+      },
+      {
+        "id": "LIB-office_niche_plant",
+        "name": "Niche plant"
+      },
+      {
+        "id": "LIB-office_oak_feature_wall_panels",
+        "name": "Oak feature wall panels"
+      },
+      {
+        "id": "LIB-office_oval_limestone_coffee_table_with_ceramic_stools",
+        "name": "Oval limestone coffee table with ceramic stools"
+      },
+      {
+        "id": "LIB-hall_reception_counter",
+        "name": "Reception counter"
+      },
+      {
+        "id": "LIB-hall_trash_bin_black",
+        "name": "Recycling bin, black (general)"
+      },
+      {
+        "id": "LIB-hall_trash_bin_blue",
+        "name": "Recycling bin, blue (recycling)"
+      },
+      {
+        "id": "LIB-hall_trash_bin_green",
+        "name": "Recycling bin, green (organic)"
+      },
+      {
+        "id": "LIB-hall_roll_cage",
+        "name": "Roll cage"
+      },
+      {
+        "id": "LIB-office_sculpted_ceramic_stool",
+        "name": "Sculpted ceramic stool"
+      },
+      {
+        "id": "LIB-hall_bin",
+        "name": "Service bin"
+      },
+      {
+        "id": "LIB-mj_table",
+        "name": "Table (MuJoCo table scene)"
+      },
+      {
+        "id": "LIB-hall_table_tennis",
+        "name": "Table tennis table"
+      },
+      {
+        "id": "LIB-office_three_seat_sofa_blue",
+        "name": "Three-seat sofa (blue)"
+      },
+      {
+        "id": "LIB-office_tv_wall_with_floating_console",
+        "name": "TV wall with floating console"
+      },
+      {
+        "id": "LIB-cleaning_tool",
+        "name": "Cleaning tool (knob + pad)"
+      }
+    ],
+    "quality": [
+      {
+        "id": "crumbs",
+        "name": "Crumbs and debris"
+      },
+      {
+        "id": "stain",
+        "name": "Stain"
+      },
+      {
+        "id": "streak",
+        "name": "Streak or wipe trace"
+      },
+      {
+        "id": "smudge",
+        "name": "Mark or smudge"
+      },
+      {
+        "id": "dust",
+        "name": "Dust"
+      },
+      {
+        "id": "spill",
+        "name": "Liquid or spill"
+      },
+      {
+        "id": "residue",
+        "name": "Product residue"
+      },
+      {
+        "id": "missed",
+        "name": "Missed area"
+      },
+      {
+        "id": "belongings",
+        "name": "Personal belongings left"
+      },
+      {
+        "id": "misplaced",
+        "name": "Out of place"
+      },
+      {
+        "id": "not-seated",
+        "name": "Part not seated"
+      },
+      {
+        "id": "missing-part",
+        "name": "Missing component"
+      },
+      {
+        "id": "fastener",
+        "name": "Fastener not driven"
+      },
+      {
+        "id": "force-band",
+        "name": "Wiping force out of band"
+      },
+      {
+        "id": "contact-time",
+        "name": "Disinfectant contact time too short"
+      },
+      {
+        "id": "damage",
+        "name": "Damage"
+      },
+      {
+        "id": "leak",
+        "name": "Leaking tap or pipe"
+      },
+      {
+        "id": "light-out",
+        "name": "Light out"
+      },
+      {
+        "id": "broken-tile",
+        "name": "Broken tile"
+      },
+      {
+        "id": "print-finished",
+        "name": "Print finished on the bed"
+      },
+      {
+        "id": "runout-paused",
+        "name": "Printer paused for filament runout"
+      },
+      {
+        "id": "outfeed-full",
+        "name": "Outfeed full of assembled units"
+      },
+      {
+        "id": "table-litter",
+        "name": "Table left with trays or litter"
+      },
+      {
+        "id": "chairs-out",
+        "name": "Chairs out of place"
+      },
+      {
+        "id": "bin-full",
+        "name": "Bin full"
+      }
+    ],
+    "tasks": {}
+  },
+  "setup": {
+    "tools": [],
+    "objects": [],
+    "quality": []
+  },
+  "task_defaults": null,
+  "task": ""
+}

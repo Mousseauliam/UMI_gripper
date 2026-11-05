@@ -1,0 +1,176 @@
+{
+  "schema": "origin_tasks/1",
+  "categories": {
+    "manip_static_locked": "base parked, column and bend held still: arms and grippers only",
+    "manip_static": "base parked: arms, grippers, column and bend",
+    "locomotion": "driving the base; arms idle (may carry something)",
+    "whole_body": "base and arms together (wiping while repositioning, opening a door)",
+    "long_horizon": "several steps in sequence: pick here, drive, place / use there"
+  },
+  "tasks": [
+    {
+      "task": "Pick up the bottle and paper ball from the table and place them in the rear-left bin on the robot's base.",
+      "category": "manip_static",
+      "group": "Desk Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Clean the desk using the microfiber tool.",
+      "category": "manip_static",
+      "group": "Desk Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Remove the empty filament spool and place it in the robot's base.",
+      "category": "manip_static",
+      "group": "Prusa \u2013 3D Printer",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Place a new filament spool onto the spool holder.",
+      "category": "manip_static",
+      "group": "Prusa \u2013 3D Printer",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Insert the filament into the extruder.",
+      "category": "manip_static",
+      "group": "Prusa \u2013 3D Printer",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Clean the round cafeteria table.",
+      "category": "whole_body",
+      "group": "Cafeteria Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Clean the cafeteria counter.",
+      "category": "whole_body",
+      "group": "Cafeteria Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Clean the cafeteria high table.",
+      "category": "whole_body",
+      "group": "Cafeteria Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Clean the cafeteria high chair.",
+      "category": "whole_body",
+      "group": "Cafeteria Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Spray the sink with cleaning solution.",
+      "category": "manip_static",
+      "group": "Restroom Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Scrub the sink.",
+      "category": "manip_static",
+      "group": "Restroom Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Spray the toilet with cleaning solution.",
+      "category": "manip_static",
+      "group": "Restroom Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Scrub the entire toilet.",
+      "category": "whole_body",
+      "group": "Restroom Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Press the toilet flush button.",
+      "category": "manip_static",
+      "group": "Restroom Cleaning",
+      "added_wall": "2026-10-16T12:30:00Z"
+    },
+    {
+      "task": "Prusa \u2013 3D Printer \u2014 Remove the PEI plate",
+      "category": "manip_static",
+      "added_wall": "2026-10-16T16:40:50Z",
+      "group": "Prusa"
+    },
+    {
+      "task": "Prusa \u2013 3D Printer \u2014 Place the PEI plate back onto the 3D printer",
+      "category": "manip_static_locked",
+      "added_wall": "2026-10-16T17:00:05Z",
+      "group": "Prusa"
+    },
+    {
+      "task": "Clean the desk",
+      "category": "whole_body",
+      "added_wall": "2026-10-21T13:43:29Z",
+      "group": "Desk cleaning"
+    },
+    {
+      "task": "Pick up the microfiber tool, wipe all coffee stains off the desk, then place the tool back on the table and release it.",
+      "category": "manip_static_locked",
+      "added_wall": "2026-10-21T14:22:19Z",
+      "group": "Desk cleaning"
+    },
+    {
+      "task": "Desk cleaning \u2014 Pick up the microfiber tool, wipe all crumbs off the desk, then place the tool back on the table and release it.",
+      "category": "manip_static",
+      "added_wall": "2026-10-21T15:48:05Z",
+      "group": "Desk cleaning"
+    },
+    {
+      "task": "Pick up the microfiber tool from the right box of the wheeled platform. Place it on the desk. Release it.",
+      "category": "manip_static",
+      "added_wall": "2026-10-22T11:40:11Z",
+      "group": "Desk cleaning"
+    },
+    {
+      "task": "Pick up and place the 4 plastic corners in their designated positions, one by one.",
+      "category": "whole_body",
+      "added_wall": "2026-10-26T16:05:05Z",
+      "group": "Legrand use case"
+    },
+    {
+      "task": "Pick up the flat metal plate and place it on the 4 plastic corners, aligning the screw holes.",
+      "category": "whole_body",
+      "added_wall": "2026-10-26T16:06:09Z",
+      "group": "Legrand use case"
+    },
+    {
+      "task": "Pick up and insert 8 screws into the designated holes of the bottom plate, one by one.",
+      "category": "whole_body",
+      "added_wall": "2026-10-26T16:06:28Z",
+      "group": "Legrand use case"
+    },
+    {
+      "task": "Pick up the microfiber tool, wipe all crumbs and coffee stains off the desk, then place the tool back on the table and release it.",
+      "category": "whole_body",
+      "added_wall": "2026-10-26T18:57:08Z",
+      "group": "Desk cleaning"
+    },
+    {
+      "task": "Clean the table. Also clean any stains or crumbs you see",
+      "category": "manip_static_locked",
+      "added_wall": "2026-10-28T15:27:09Z"
+    },
+    {
+      "task": "Pick up the microfiber tool by its handle. Flip it first if upside down.",
+      "category": "manip_static",
+      "added_wall": "2026-10-29T15:14:03Z"
+    },
+    {
+      "task": "Grab the visible trash from the table and place it in the back left bin in the base.",
+      "category": "manip_static_locked",
+      "added_wall": "2026-10-30T14:49:29Z",
+      "group": "Desk cleaning"
+    }
+  ],
+  "file": "/home/robot/origin_data/tasks.json",
+  "selected": "",
+  "operator": "",
+  "location": ""
+}

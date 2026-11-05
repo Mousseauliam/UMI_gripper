@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>UMI Gripper</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="topin">
+        <h1>UMI GRIPPER</h1>
+        <span id="connection" class="chip">connecting</span
+        ><span id="topRec" class="chip"></span>
+      </div>
+      <div class="msgs"><p id="msg"></p></div>
+    </header>
+    <main id="controlPage">
+      <div class="col">
+        <section class="card">
+          <h2>Gripper <span id="motorState" class="chip"></span></h2>
+          <div class="grid3">
+            <label
+              >Position actuelle
+              <div id="position" class="metric">—</div></label
+            ><label
+              >Tension actuelle
+              <div id="voltage" class="metric">—</div></label
+            ><label
+              >Température moteur
+              <div id="temperature" class="metric">—</div></label
+            >
+          </div>
+          <div class="row">
+            <button id="motorOn" class="go">Motor ON</button
+            ><button id="motorOff" class="stop">Motor OFF</button
+            ><button id="toggle">Toggle open / close</button>
+          </div>
+          <h3>Motor settings</h3>
+          <label>Detected motor<select id="motorSelect"></select></label>
+          <div class="row">
+            <button id="scan">Detect motors</button
+            ><button id="setOpen">Set current as open</button
+            ><button id="setClosed">Set current as closed</button>
+          </div>
+          <p id="angles" class="hint"></p>
+          <p id="motorError" class="err"></p>
+        </section>
+        <section class="card" id="vrSection">
+          <h2>VR</h2>
+          <div class="row">
+            <button id="enterVR" class="go">Enter VR</button
+            ><button id="questCamera">Enable Quest Cam</button>
+          </div>
+          <p id="vrStatus" class="hint"></p>
+          <p id="questStatus" class="hint"></p>
+        </section>
+        <section class="card">
+          <h2>Recording <span id="recChip" class="chip"></span></h2>
+          <div class="grid">
+            <label
+              >Operator
+              <input
+                id="operator"
+                maxlength="80"
+                placeholder="who teleoperates, e.g. Sanket"
+            /></label>
+            <label
+              >Location
+              <input
+                id="location"
+                maxlength="80"
+                placeholder="site / room, e.g. office kitchen"
+            /></label>
+          </div>
+          <label
+            >Task
+            <select id="task"></select
+          ></label>
+          <details id="taskAdd">
+            <summary>+ add a task to the list</summary>
+            <div class="grid">
+              <label
+                >New task
+                <input
+                  id="newTask"
+                  maxlength="300"
+                  placeholder="the instruction, e.g. pick up the red cup and place it in the sink"
+              /></label>
+              <label
+                >Category
+                <select id="newCat"></select
+              ></label>
+              <label
+                >Group
+                <input
+                  id="newGroup"
+                  maxlength="80"
+                  placeholder="optional, e.g. Desk Cleaning"
+              /></label>
+            </div>
+            <div class="row">
+              <button id="addTask">Add to the task list</button>
+            </div>
+            <div id="taskHelp" class="hint"></div>
+          </details>
+          <div id="setupBox" class="setup">
+            <h3>Setup</h3>
+            <div class="setrow">
+              <span class="lbl">Tools</span>
+              <div id="set_tools" class="chips"></div>
+              <select id="setAdd_tools" class="setadd"></select>
+            </div>
+            <div class="setrow">
+              <span class="lbl">Objects</span>
+              <div id="set_objects" class="chips"></div>
+              <select id="setAdd_objects" class="setadd"></select>
+            </div>
+            <div class="setrow">
+              <span class="lbl">Quality checks</span>
+              <div id="set_quality" class="chips"></div>
+              <select id="setAdd_quality" class="setadd"></select>
+            </div>
+            <div id="setupDefaults" class="hint"></div>
+            <div id="setupNote" class="hint"></div>
+          </div>
+          <div class="row">
+            <button id="recStart" class="go">Start recording</button>
+          </div>
+          <label style="margin-top: 0.6rem"
+            >Note for the stop
+            <input
+              id="recNote"
+              maxlength="500"
+              placeholder="optional (e.g. dropped the cup)"
+          /></label>
+          <div class="row" style="margin-top: 0">
+            <button id="recStop">Stop &#10003; success</button>
+            <button id="recFail" class="warn">Stop &#10007; fail</button>
+            <button id="recDiscard" class="stop">Discard</button>
+          </div>
+          <p class="hint">
+            Headset: right B tap = start / stop &#10003;, left Y = stop
+            &#10007;, B held 2 seconds = not judged. A: show/hide right camera ·
+            X: show/hide left camera.
+          </p>
+          <details id="recAdv" hidden>
+            <summary>advanced</summary>
+            <div class="grid">
+              <label>Repo id <input id="repo" maxlength="129" /></label>
+              <label
+                >Episode id
+                <input
+                  id="episode"
+                  maxlength="128"
+                  placeholder="auto: UTC stamp + world"
+              /></label>
+            </div>
+            <dl id="reckv"></dl>
+          </details>
+        </section>
+      </div>
+      <div class="col">
+        <section class="card" id="hwlib">
+          <h2>Robot episodes</h2>
+          <details id="convBox" class="box" open>
+            <summary>Convert to a dataset</summary>
+            <div class="grid" style="margin-top: 0.5rem">
+              <label
+                >Dataset (owner/name)
+                <input id="hwrepo" maxlength="129" list="hwrepos" /><datalist
+                  id="hwrepos"
+                ></datalist
+              ></label>
+              <label
+                >Format
+                <select id="cvFormat">
+                  <option value="lerobot_v3">
+                    LeRobot v3 (π0 / π0.5, SmolVLA, ACT ...)
+                  </option>
+                  <option value="gr00t_v2">
+                    GR00T (LeRobot v2.1 + modality.json)
+                  </option>
+                </select></label
+              >
+            </div>
+            <div class="checks">
+              <span class="muted" style="font-size: 0.8rem">outcome:</span>
+              <label><input type="checkbox" id="cvOk" checked />success</label>
+              <label><input type="checkbox" id="cvFail" />fail</label>
+              <label><input type="checkbox" id="cvNone" />not judged</label>
+            </div>
+            <details>
+              <summary>more filters and options</summary>
+              <div class="grid" style="margin-top: 0.4rem">
+                <label
+                  >Group
+                  <select id="cvGroup">
+                    <option value="">any</option>
+                  </select></label
+                >
+                <label
+                  >Session
+                  <input
+                    id="cvSession"
+                    maxlength="40"
+                    placeholder="any (or a session id)"
+                /></label>
+                <label
+                  >Joint frame
+                  <select id="cvFrame">
+                    <option value="urdf">URDF angles (default)</option>
+                    <option value="raw">raw motor angles</option>
+                  </select></label
+                >
+                <label style="align-self: end"
+                  ><input type="checkbox" id="cvRaw" />add raw-angle twins
+                  (LeRobot v3)</label
+                >
+              </div>
+            </details>
+            <div class="between" style="margin-top: 0.4rem">
+              <div
+                id="cvPreview"
+                class="muted"
+                style="font-size: 0.88rem; flex: 1 1 16rem"
+              ></div>
+              <button
+                id="cvGo"
+                class="go"
+                style="flex: 0 0 auto; padding: 0.6rem 1.6rem"
+              >
+                Convert
+              </button>
+            </div>
+            <div
+              id="cvJobs"
+              style="font-size: 0.85rem; margin-top: 0.3rem"
+            ></div>
+          </details>
+          <div class="tabs">
+            <button id="tabNew" class="on" data-tab="paneNew">
+              To convert
+            </button>
+            <button id="tabDone" data-tab="paneDone">Converted</button
+            ><button id="tabSets" data-tab="paneSets">Datasets</button>
+          </div>
+          <div id="paneNew">
+            <table>
+              <thead>
+                <tr>
+                  <th>episode</th>
+                  <th>outcome</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hwepsNew"></tbody>
+            </table>
+            <div id="nohwepsNew" class="empty">nothing waiting</div>
+          </div>
+          <div id="paneDone" hidden>
+            <table>
+              <thead>
+                <tr>
+                  <th>episode</th>
+                  <th>outcome</th>
+                  <th>in datasets</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hwepsDone"></tbody>
+            </table>
+            <div id="nohwepsDone" class="empty">none yet</div>
+          </div>
+          <div id="paneSets" hidden>
+            <table>
+              <thead>
+                <tr>
+                  <th>dataset</th>
+                  <th>format</th>
+                  <th>episodes</th>
+                  <th>size</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hwsets"></tbody>
+            </table>
+          </div>
+          <details>
+            <summary>storage</summary>
+            <div id="hwdirs" class="hint"></div>
+          </details>
+        </section>
+        <section class="card">
+          <h2>Cameras</h2>
+          <div class="camera-grid" id="cameras"></div>
+        </section>
+      </div>
+    </main>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/vr.js"></script>
+    <script src="/static/js/quest_camera.js"></script>
+  </body>
+</html>

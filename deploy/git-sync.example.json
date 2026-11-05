@@ -1,0 +1,6 @@
+{
+  "repository": "git@github.com:Mousseauliam/UMI_gripper.git",
+  "branch": "main",
+  "destination": "/home/admin/umi-v3",
+  "ethernet": "eth0"
+}

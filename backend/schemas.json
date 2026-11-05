@@ -1,0 +1,152 @@
+{
+  "/arm/state": {
+    "name": "origin.proto.ArmStatePayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct ArmJointState { double q[7]; double qd[7]; double tau[7]; uint8_t fault[7]; uint8_t mode_state[7]; int32_t temp_mos[7]; }; struct ArmStatePayload { ArmJointState left; ArmJointState right; };",
+    "message_encoding": "origin/wire"
+  },
+  "/arm/record": {
+    "name": "origin.proto.ArmRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct ArmRecordPayload { uint8_t kind; double q_ref[14]; double left_pose[16]; double right_pose[16]; uint8_t ik_ok; uint32_t ik_solve_us; };",
+    "message_encoding": "origin/wire"
+  },
+  "/arm/rejected": {
+    "name": "origin.proto.RejectedRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct RejectedRecordPayload { uint32_t magic /* 'REJ1' */; uint8_t reason; uint8_t cmd_command_mode; uint8_t cmd_flags; uint8_t _pad0; uint32_t cmd_payload_size; uint32_t _pad1; uint64_t cmd_seq; uint64_t cmd_timestamp_ns; uint8_t cmd_payload[256]; }; reason: 0 other, 1 bad_frame, 2 wrong_subsystem, 3 wrong_mode, 4 not_ready, 5 estop, 6 fault, 7 torque_off, 8 passthrough, 9 verb_only, 10 non_finite, 11 out_of_range, 12 controller_refused, 13 superseded (runtime/include/origin/proto/rejected.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/arm/frame": {
+    "name": "origin.proto.FrameInfoPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct FrameInfoPayload { uint32_t magic /* 'FRM1' */; uint8_t wire_frame /* 0 raw, 1 urdf */; uint8_t n_joints; uint8_t _pad0[2]; double zero[14]; double sign[14]; double raw_now[14]; uint8_t alternate[14]; uint8_t _pad1[2]; }; raw = zero + sign * wire (+ 2 pi k next to raw_now); arm: left 0-6, right 7-13; hip: joint 0 (runtime/include/origin/proto/frame_info.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/base/state": {
+    "name": "origin.proto.BaseStatePayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct BaseStatePayload { double steer_pos_rad[3]; double steer_vel[3]; double steer_torque[3]; uint8_t steer_valid[3]; uint8_t steer_fault[3]; double erpm[3]; double rpm[3]; double rpm_tacho[3]; double duty[3]; double current_a[3]; int32_t tachometer[3]; double odom_m[3]; double v_in[3]; uint8_t vesc_valid[3]; uint8_t drive_mode; uint8_t cmd_active; double target_rpm[3]; double ctrl_rpm[3]; double i_cmd_a[3]; uint8_t speed_flags[3]; };",
+    "message_encoding": "origin/wire"
+  },
+  "/base/record": {
+    "name": "origin.proto.BaseRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct BaseRecordPayload { uint8_t kind; double in[6]; double steer_rad[3]; double drive[3]; uint8_t drive_active[3]; };",
+    "message_encoding": "origin/wire"
+  },
+  "/base/rejected": {
+    "name": "origin.proto.RejectedRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct RejectedRecordPayload { uint32_t magic /* 'REJ1' */; uint8_t reason; uint8_t cmd_command_mode; uint8_t cmd_flags; uint8_t _pad0; uint32_t cmd_payload_size; uint32_t _pad1; uint64_t cmd_seq; uint64_t cmd_timestamp_ns; uint8_t cmd_payload[256]; }; reason: 0 other, 1 bad_frame, 2 wrong_subsystem, 3 wrong_mode, 4 not_ready, 5 estop, 6 fault, 7 torque_off, 8 passthrough, 9 verb_only, 10 non_finite, 11 out_of_range, 12 controller_refused, 13 superseded (runtime/include/origin/proto/rejected.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/base/frame": {
+    "name": "origin.proto.FrameInfoPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct FrameInfoPayload { uint32_t magic /* 'FRM1' */; uint8_t wire_frame /* 0 raw, 1 urdf */; uint8_t n_joints; uint8_t _pad0[2]; double zero[14]; double sign[14]; double raw_now[14]; uint8_t alternate[14]; uint8_t _pad1[2]; }; raw = zero + sign * wire (+ 2 pi k next to raw_now); arm: left 0-6, right 7-13; hip: joint 0 (runtime/include/origin/proto/frame_info.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/hip/state": {
+    "name": "origin.proto.HipStatePayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct HipStatePayload { double pos_rad; double velocity; double torque; uint8_t valid; };",
+    "message_encoding": "origin/wire"
+  },
+  "/hip/record": {
+    "name": "origin.proto.HipRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct HipRecordPayload { double angle_cmd; double angle_applied; };",
+    "message_encoding": "origin/wire"
+  },
+  "/hip/rejected": {
+    "name": "origin.proto.RejectedRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct RejectedRecordPayload { uint32_t magic /* 'REJ1' */; uint8_t reason; uint8_t cmd_command_mode; uint8_t cmd_flags; uint8_t _pad0; uint32_t cmd_payload_size; uint32_t _pad1; uint64_t cmd_seq; uint64_t cmd_timestamp_ns; uint8_t cmd_payload[256]; }; reason: 0 other, 1 bad_frame, 2 wrong_subsystem, 3 wrong_mode, 4 not_ready, 5 estop, 6 fault, 7 torque_off, 8 passthrough, 9 verb_only, 10 non_finite, 11 out_of_range, 12 controller_refused, 13 superseded (runtime/include/origin/proto/rejected.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/hip/frame": {
+    "name": "origin.proto.FrameInfoPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct FrameInfoPayload { uint32_t magic /* 'FRM1' */; uint8_t wire_frame /* 0 raw, 1 urdf */; uint8_t n_joints; uint8_t _pad0[2]; double zero[14]; double sign[14]; double raw_now[14]; uint8_t alternate[14]; uint8_t _pad1[2]; }; raw = zero + sign * wire (+ 2 pi k next to raw_now); arm: left 0-6, right 7-13; hip: joint 0 (runtime/include/origin/proto/frame_info.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/gripper/state": {
+    "name": "origin.proto.GripperStatePayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct GripperStatePayload { double pos_norm[2]; uint8_t valid[2]; };",
+    "message_encoding": "origin/wire"
+  },
+  "/gripper/record": {
+    "name": "origin.proto.GripperRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct GripperRecordPayload { double closed_cmd[2]; double target_rad[2]; };",
+    "message_encoding": "origin/wire"
+  },
+  "/gripper/rejected": {
+    "name": "origin.proto.RejectedRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct RejectedRecordPayload { uint32_t magic /* 'REJ1' */; uint8_t reason; uint8_t cmd_command_mode; uint8_t cmd_flags; uint8_t _pad0; uint32_t cmd_payload_size; uint32_t _pad1; uint64_t cmd_seq; uint64_t cmd_timestamp_ns; uint8_t cmd_payload[256]; }; reason: 0 other, 1 bad_frame, 2 wrong_subsystem, 3 wrong_mode, 4 not_ready, 5 estop, 6 fault, 7 torque_off, 8 passthrough, 9 verb_only, 10 non_finite, 11 out_of_range, 12 controller_refused, 13 superseded (runtime/include/origin/proto/rejected.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/gripper/frame": {
+    "name": "origin.proto.FrameInfoPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct FrameInfoPayload { uint32_t magic /* 'FRM1' */; uint8_t wire_frame /* 0 raw, 1 urdf */; uint8_t n_joints; uint8_t _pad0[2]; double zero[14]; double sign[14]; double raw_now[14]; uint8_t alternate[14]; uint8_t _pad1[2]; }; raw = zero + sign * wire (+ 2 pi k next to raw_now); arm: left 0-6, right 7-13; hip: joint 0 (runtime/include/origin/proto/frame_info.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/column/state": {
+    "name": "origin.proto.ColumnStatePayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct ColumnStatePayload { float voltage; float current; uint8_t valid; float height_cm; uint8_t height_valid; uint8_t ready; uint16_t col_bytes_per_s; uint8_t soft_limit_count; uint16_t height_age_ms; };",
+    "message_encoding": "origin/wire"
+  },
+  "/column/record": {
+    "name": "origin.proto.ColumnRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct ColumnRecordPayload { int8_t dir_cmd; int8_t dir_applied; float height_cm; };",
+    "message_encoding": "origin/wire"
+  },
+  "/column/rejected": {
+    "name": "origin.proto.RejectedRecordPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct RejectedRecordPayload { uint32_t magic /* 'REJ1' */; uint8_t reason; uint8_t cmd_command_mode; uint8_t cmd_flags; uint8_t _pad0; uint32_t cmd_payload_size; uint32_t _pad1; uint64_t cmd_seq; uint64_t cmd_timestamp_ns; uint8_t cmd_payload[256]; }; reason: 0 other, 1 bad_frame, 2 wrong_subsystem, 3 wrong_mode, 4 not_ready, 5 estop, 6 fault, 7 torque_off, 8 passthrough, 9 verb_only, 10 non_finite, 11 out_of_range, 12 controller_refused, 13 superseded (runtime/include/origin/proto/rejected.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/column/frame": {
+    "name": "origin.proto.FrameInfoPayload",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct FrameInfoPayload { uint32_t magic /* 'FRM1' */; uint8_t wire_frame /* 0 raw, 1 urdf */; uint8_t n_joints; uint8_t _pad0[2]; double zero[14]; double sign[14]; double raw_now[14]; uint8_t alternate[14]; uint8_t _pad1[2]; }; raw = zero + sign * wire (+ 2 pi k next to raw_now); arm: left 0-6, right 7-13; hip: joint 0 (runtime/include/origin/proto/frame_info.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/cam/head_stereo/left": {
+    "name": "origin.logger.VideoFrame",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct VideoFrameRecordHeader { uint64_t frame_seq; uint64_t stamp_ns; uint32_t width; uint32_t height; uint32_t fourcc /* 'H264' */; uint32_t size; uint32_t flags /* bit0 keyframe, bit1 SPS/PPS */; uint32_t lost; }; followed by `size` bytes: one H.264 access unit, Annex-B, AU delimiter first, SPS/PPS before every IDR (origin_logger/include/origin/logger/cam_record.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/cam/head_stereo/right": {
+    "name": "origin.logger.VideoFrame",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct VideoFrameRecordHeader { uint64_t frame_seq; uint64_t stamp_ns; uint32_t width; uint32_t height; uint32_t fourcc /* 'H264' */; uint32_t size; uint32_t flags /* bit0 keyframe, bit1 SPS/PPS */; uint32_t lost; }; followed by `size` bytes: one H.264 access unit, Annex-B, AU delimiter first, SPS/PPS before every IDR (origin_logger/include/origin/logger/cam_record.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/cam/wrist_left": {
+    "name": "origin.logger.VideoFrame",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct VideoFrameRecordHeader { uint64_t frame_seq; uint64_t stamp_ns; uint32_t width; uint32_t height; uint32_t fourcc /* 'H264' */; uint32_t size; uint32_t flags /* bit0 keyframe, bit1 SPS/PPS */; uint32_t lost; }; followed by `size` bytes: one H.264 access unit, Annex-B, AU delimiter first, SPS/PPS before every IDR (origin_logger/include/origin/logger/cam_record.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/cam/wrist_right": {
+    "name": "origin.logger.VideoFrame",
+    "encoding": "origin/packed-c-struct",
+    "schema": "struct VideoFrameRecordHeader { uint64_t frame_seq; uint64_t stamp_ns; uint32_t width; uint32_t height; uint32_t fourcc /* 'H264' */; uint32_t size; uint32_t flags /* bit0 keyframe, bit1 SPS/PPS */; uint32_t lost; }; followed by `size` bytes: one H.264 access unit, Annex-B, AU delimiter first, SPS/PPS before every IDR (origin_logger/include/origin/logger/cam_record.hpp)",
+    "message_encoding": "origin/wire"
+  },
+  "/origin/episode": {
+    "name": "origin.EpisodeMarker",
+    "encoding": "origin/packed-c-struct",
+    "schema": "u64 t_ns; u8 begin; u32 index;",
+    "message_encoding": "origin/wire"
+  }
+}

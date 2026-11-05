@@ -1,0 +1,17 @@
+[Unit]
+Description=UMI Git checkout updater (Ethernet, 10 seconds)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin
+ExecStart=/usr/bin/python3 /usr/local/lib/umi-git-sync.py --config /etc/umi-git-sync.json
+Environment=GIT_TERMINAL_PROMPT=0
+Environment="GIT_SSH_COMMAND=ssh -i /home/admin/.ssh/umi_git_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

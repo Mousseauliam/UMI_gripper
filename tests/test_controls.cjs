@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const Buttons=require('../frontend/js/vr.js');
+const b=new Buttons();
+assert.equal(b.update(false,false,0,false),null);
+assert.equal(b.update(false,true,10,false),null);
+assert.equal(b.update(false,false,100,false),'start');
+assert.equal(b.update(false,true,200,true),null);
+assert.equal(b.update(false,true,2199,true),null);
+assert.equal(b.update(false,true,2200,true),'not judged');
+assert.equal(b.update(false,false,2300,false),null);
+assert.equal(b.update(false,true,2400,true),null);
+assert.equal(b.update(false,false,2500,true),'success');
+assert.equal(b.update(false,true,2600,true),null);
+assert.equal(b.update(true,true,2700,true),'fail');
+assert.equal(b.update(false,false,2800,false),null);
+console.log('Record buttons: tap, hold, fail and simultaneous release pass');
