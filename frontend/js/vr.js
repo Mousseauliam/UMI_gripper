@@ -112,6 +112,23 @@ if (typeof module !== "undefined") module.exports = RecordButtons;
 else
   (() => {
     let calibration = null;
+    const triggerLocks = new Map();
+
+    function triggerCommand(source, willSend) {
+      const { handedness, gamepad } = source;
+      const value = gamepad.buttons[0].value;
+      const pressed = !!gamepad.buttons[3]?.pressed;
+      let lock = triggerLocks.get(handedness);
+      if (!lock || lock.source !== source) {
+        lock = { source, pressed, locked: false, value };
+        triggerLocks.set(handedness, lock);
+      }
+      if (pressed && !lock.pressed) lock.locked = !lock.locked;
+      lock.pressed = pressed;
+      if (willSend && !lock.locked) lock.value = value;
+      return lock.value;
+    }
+
     let session = null,
       gl = null,
       layer = null,
@@ -250,6 +267,7 @@ else
       const triggerText = side => {
         const controller = [...session.inputSources].find(s => s.handedness === side && s.gamepad?.mapping === "xr-standard");
         const value = controller?.gamepad.buttons[0]?.value;
+        if (triggerLocks.get(side)?.locked) return (100 * triggerLocks.get(side).value).toFixed(1) + " % 🔒";
         return value == null ? "—" : (100 * value).toFixed(1) + " %";
       };
       hudContext.fillText("Gâchette G : " + triggerText("left") + "     D : " + triggerText("right"), 512, 178);
@@ -327,6 +345,7 @@ else
     async function finish(reason = "VR ended") {
       const old = session;
       calibration = null;
+      triggerLocks.clear();
       session = null;
       ready = false;
       pending = false;
@@ -394,6 +413,7 @@ else
           return;
         }
         if (!ready && !starting) {
+          triggerLocks.clear();
           starting = true;
           send({ type: "vr_start" });
           return;
@@ -404,6 +424,9 @@ else
             s.handedness === "left" && s.gamepad?.mapping === "xr-standard",
         );
         buttons(right.gamepad, left?.gamepad, time);
+        const triggers = { right: triggerCommand(right, !pending) };
+        if (left) triggers.left = triggerCommand(left, !pending);
+        else triggerLocks.delete('left');
         if (pending) return;
         const hands = {};
         for (const source of session.inputSources) {
