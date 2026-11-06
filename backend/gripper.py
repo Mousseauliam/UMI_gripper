@@ -93,7 +93,12 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                self.move(jaw_angle(value, self.config))
+                midpoint = self.config.get("trigger_midpoint") or 0.5
+                if value <= midpoint:
+                    closure = 0.5 * value / midpoint
+                else:
+                    closure = 0.5 + 0.5 * (value - midpoint) / (1 - midpoint)
+                self.move(jaw_angle(closure, self.config))
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -207,7 +212,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_midpoint")
             }
         save_json(self.path, self.config)
 
@@ -301,6 +306,11 @@ class Motor:
                     if abs(position - c["opened"]) < abs(position - c["closed"])
                     else c["opened"]
                 )
+            elif name == "trigger-midpoint":
+                if self.active:
+                    raise ValueError("Passer Motor OFF avant de calibrer la gâchette")
+                axis.config["trigger_midpoint"] = finite(data["percent"], 10, 90) / 100
+                self.save()
             elif name == "speed":
                 self.config["travel_seconds"] = finite(data["seconds"], 0.30, 1.20)
                 self.save()
