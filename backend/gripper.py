@@ -10,7 +10,17 @@ KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
 DEFAULT_TRAVEL_SECONDS = 0.45
-TRIGGER_DEADBAND = 0.05
+def jaw_angle(value, config):
+    opened, closed = config["opened"], config["closed"]
+    points = config.get("jaw_points") or {}
+    if not points:
+        fraction = math.acos(1 - 2 * value) / math.pi
+        return opened + fraction * (closed - opened)
+    anchors = [(0.0, opened), *sorted((int(p) / 100, a) for p, a in points.items()), (1.0, closed)]
+    for (start, a), (end, b) in zip(anchors, anchors[1:]):
+        if value <= end:
+            return a + (b - a) * (value - start) / (end - start)
+
 
 
 class Axis:
@@ -19,7 +29,6 @@ class Axis:
         self.active = self.vr = self.opening = self.released = False
         self.target = None
         self.command_target = None
-        self.trigger_value = 0.0
         self.telemetry = {}
         self.seen = self.started = 0
         self.voltage_at = 0
@@ -62,7 +71,6 @@ class Axis:
                 self.started = self.seen = time.monotonic()
                 self.vr = vr
                 self.released = False
-                self.trigger_value = 0.0
                 if vr:
                     self.opening = True
                     self.move(opened)
@@ -85,15 +93,7 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                if value <= 0.01:
-                    value = 0.0
-                elif value >= 0.99:
-                    value = 1.0
-                elif abs(value - self.trigger_value) < TRIGGER_DEADBAND:
-                    return
-                self.trigger_value = value
-                opened, closed = self.config["opened"], self.config["closed"]
-                self.move((1 - value) * opened + value * closed)
+                self.move(jaw_angle(value, self.config))
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -207,7 +207,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points")
             }
         save_json(self.path, self.config)
 
@@ -315,12 +315,26 @@ class Motor:
                 self.axis(mid).config["uid"] = uid
                 self.config["selected"] = mid
                 self.save()
-            elif name in ("opened", "closed"):
+            elif name in ("opened", "closed", "jaw-point"):
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de définir les angles")
-                axis.config[name] = finite(
+                position = finite(
                     self.bus.read(axis.config["selected"], 0x7019), -12.5, 12.5
                 )
+                if name == "jaw-point":
+                    percent = str(data["percent"])
+                    if percent not in ("25", "50", "75"):
+                        raise ValueError("Choisir 25, 50 ou 75 %")
+                    opened, closed = axis.positions()
+                    points = dict(axis.config.get("jaw_points") or {})
+                    points[percent] = position
+                    angles = [opened, *(points[k] for k in sorted(points)), closed]
+                    if any((b - a) * (closed - opened) <= 0 for a, b in zip(angles, angles[1:])):
+                        raise ValueError("Vérifier la position et l'ordre des points de calibration")
+                    axis.config["jaw_points"] = points
+                else:
+                    axis.config[name] = position
+                    axis.config["jaw_points"] = {}
                 self.save()
             else:
                 raise ValueError("Commande inconnue")
