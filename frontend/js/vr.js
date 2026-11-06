@@ -235,7 +235,7 @@ else
             ? "Saved · " + r.last.outcome
             : "B: record · Y: fail",
         512,
-        78,
+        59,
       );
       hudContext.font = "36px sans-serif";
       hudContext.fillStyle = "#d1d6df";
@@ -244,9 +244,15 @@ else
           ? "Release both triggers to control"
           : state?.recording.error || "B hold 2 s: not judged",
         512,
-        144,
+        118,
         980,
       );
+      const triggerText = side => {
+        const controller = [...session.inputSources].find(s => s.handedness === side && s.gamepad?.mapping === "xr-standard");
+        const value = controller?.gamepad.buttons[0]?.value;
+        return value == null ? "—" : (100 * value).toFixed(1) + " %";
+      };
+      hudContext.fillText("Gâchette G : " + triggerText("left") + "     D : " + triggerText("right"), 512, 178);
       gl.uniformMatrix4fv(worldFromHead, false, pose.transform.matrix);
       for (const view of pose.views) {
         const vp = layer.getViewport(view);
@@ -259,15 +265,15 @@ else
             -0.195,
             0.8,
             (0.8 * images[0].naturalHeight) / images[0].naturalWidth,
-          ]);
+          ],3.5);
         if (cameraVisible.right && images[1].naturalWidth)
           quad(textures[1], images[1], [
             1.25,
             -0.195,
             0.8,
             (0.8 * images[1].naturalHeight) / images[1].naturalWidth,
-          ]);
-        quad(textures[2], hud, [0, 0.8166667, 1.225, 0.2296875], 3.5);
+          ],3.5);
+        quad(textures[2], hud, [0, 0.8166667, 1.225, 0.2296875], 4.0);
       }
     }
     function poseData(p) {
@@ -503,7 +509,7 @@ else
         });
         ready = pending = starting = false;
         recordButtons.reset();
-        cameraVisible.left = cameraVisible.right = true;
+        cameraVisible.left = cameraVisible.right = false;
         cameraPressed.left = cameraPressed.right = true;
         lastFrame = performance.now();
         framesStarted = true;

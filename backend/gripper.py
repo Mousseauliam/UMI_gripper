@@ -94,13 +94,12 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                curve = self.config.get("trigger_curve") or [self.config.get("trigger_midpoint") or 0.5]
-                anchors = [0, *curve, 1]
+                anchors = [0, *(self.config.get("trigger_curve") or []), 1]
                 for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
                     if value <= high:
                         closure = (index + (value - low) / (high - low)) / (len(anchors) - 1)
+                        self.move(jaw_angle(closure, self.config))
                         break
-                self.move(jaw_angle(closure, self.config))
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -214,7 +213,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_midpoint", "trigger_curve")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_curve")
             }
         save_json(self.path, self.config)
 
