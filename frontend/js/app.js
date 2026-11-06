@@ -93,6 +93,10 @@ function render(s) {
       : m.telemetry.position.toFixed(3) + " rad";
   $("voltage").textContent =
     m.telemetry.voltage == null ? "—" : m.telemetry.voltage.toFixed(1) + " V";
+  $("torque").textContent =
+    m.active && Number.isFinite(m.telemetry.torque) ? m.telemetry.torque.toFixed(2) + " N·m" : "—";
+  $("kp").textContent =
+    m.active && Number.isFinite(m.telemetry.kp) ? m.telemetry.kp.toFixed(2) : "—";
   $("temperature").textContent =
     m.telemetry.temperature == null
       ? "—"

@@ -238,6 +238,11 @@ select:disabled {
   grid-template-columns: 1fr 1fr;
   gap: 0 0.8rem;
 }
+.motor-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
 .grid3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
