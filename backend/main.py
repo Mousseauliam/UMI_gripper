@@ -26,7 +26,7 @@ def create_app(state=None):
 
     app.on_response_prepare.append(cache_control)
     app.router.add_get("/", index)
-    app.router.add_static("/static/", FRONTEND, show_index=False)
+    app.router.add_static("/static/", FRONTEND, show_index=False) 
     return app
 
 
