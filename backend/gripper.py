@@ -9,7 +9,7 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
-HOLD_KP = 0.6
+HOLD_KP = 0.8
 HOLD_ERROR_RAD = 0.49
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
