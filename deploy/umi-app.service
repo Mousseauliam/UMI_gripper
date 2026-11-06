@@ -1,0 +1,16 @@
+[Unit]
+Description=UMI grippers and recording interface
+After=network.target
+ConditionPathExists=/home/admin/umi-v3/deploy/umi-app.service
+
+[Service]
+User=admin
+WorkingDirectory=/home/admin/umi-v3
+Environment=UMI_DATA_DIR=/home/admin/umi-data
+ExecStart=/home/admin/umi-env/bin/python -m backend.main
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

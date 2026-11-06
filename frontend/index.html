@@ -36,6 +36,15 @@
             ><button id="motorOff" class="stop">Motor OFF</button
             ><button id="toggle">Toggle open / close</button>
           </div>
+          <h3>Gripper speed</h3>
+          <label>Full stroke time (both grippers)
+            <select id="travelTime">
+              <option value="0.3">Fast · 0.30 s</option>
+              <option value="0.45">Normal · 0.45 s</option>
+              <option value="0.75">Precise · 0.75 s</option>
+              <option value="1.2">Slow · 1.20 s</option>
+            </select>
+          </label>
           <h3>Motor settings</h3>
           <label>Detected motor<select id="motorSelect"></select></label>
           <div class="row">

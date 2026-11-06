@@ -1,0 +1,9 @@
+[Unit]
+Description=Start UMI when the application service reaches the checkout
+
+[Path]
+PathChanged=/home/admin/umi-v3/.git/refs/heads/main
+Unit=umi-app.service
+
+[Install]
+WantedBy=multi-user.target

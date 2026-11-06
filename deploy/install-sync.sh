@@ -6,5 +6,7 @@ install -m 644 "$script_dir/umi-git-sync.service" /etc/systemd/system/umi-git-sy
 if [ ! -f /etc/umi-git-sync.json ]; then
     install -m 644 "$script_dir/git-sync.example.json" /etc/umi-git-sync.json
 fi
+install -m 644 "$script_dir/umi-app.service" "$script_dir/umi-app.path" /etc/systemd/system/
 systemctl daemon-reload
+systemctl enable --now umi-app.path umi-app.service
 systemctl enable --now umi-git-sync.service

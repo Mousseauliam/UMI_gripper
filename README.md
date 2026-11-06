@@ -36,7 +36,7 @@ Open `http://<pi-ip>:8080`. Quest WebXR needs a secure context: place a certific
 
 ## Grippers and VR
 
-Left motor: **18**. Right motor: **28**. Save each motor's open/closed positions in the interface before activation. `KP = 2.04`, `KD = 0.178571` and `PERIOD = 0.005` are in `backend/gripper.py`. Velocity target and feedforward torque are zero; position follows the trigger directly. Zero velocity target is a damping reference, not a speed limit. The 200 Hz loop is a scheduling target, not a real-time guarantee.
+Left motor: **18**. Right motor: **28**. Save each motor's open/closed positions in the interface before activation. `KP = 2.04`, `KD = 0.178571` and `PERIOD = 0.005` are in `backend/gripper.py`. Velocity target and feedforward torque are zero; the trigger sets the requested position. Zero velocity target is a damping reference, not a speed limit. The 200 Hz loop is a scheduling target, not a real-time guarantee.
 
 Entering VR opens both grippers. Release each trigger once to take control. A toggles the right preview; X toggles the left. B starts recording or ends with success; holding B for two seconds ends with not judged. Y ends with fail. Motor faults and lost control/feedback stop actuation.
 
@@ -67,7 +67,7 @@ systemctl status umi-git-sync
 journalctl -u umi-git-sync -f
 ```
 
-Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admin/.ssh/umi_git_deploy`, stored only on the Pi. The service does not start the app, install dependencies, configure Wi-Fi, or update itself. Re-run the installer after changing the updater. Until the repository has its first commit on `main`, the service waits and checks again every 10 seconds.
+Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admin/.ssh/umi_git_deploy`, stored only on the Pi. The Git service downloads commits. umi-app.path starts the app on the first deployment. umi-app.service runs it on subsequent boots. After later pushes, restart the app between sessions with sudo systemctl restart umi-app. The app uses /home/admin/umi-env and stores calibrations and episodes in /home/admin/umi-data. Re-run the installer after changing the updater. Until the repository has its first commit on `main`, the service waits and checks again every 10 seconds.
 
 ## CAD
 
@@ -75,12 +75,8 @@ Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admi
 
 Put current STL/3MF exports in `assets/print/` and STEP exports in `assets/simulation/`. These folders are placeholders: no CAD export was supplied with the source, and older V1/V2 models have not been substituted.
 
-## Tests
+## Speed and mid-grip precision
 
-```sh
-python -m unittest discover -s tests -v
-node tests/test_controls.cjs
-```
+Gripper speed sets the minimum commanded time for one calibrated stroke, for both axes in either direction. Choose 0.30, 0.45 (default), 0.75 or 1.20 seconds. This applies to entering VR, toggle and trigger movements. Actual travel depends on load and motor response. The MIT loop advances the command by at most stroke × elapsed time / selected time on each tick. Delayed ticks use at most 20 ms of catch-up. Small deliberate movements can reach their target in just a few ticks.
 
-Tests use simulated CAN traffic and temporary recordings, without moving hardware.
-
+While holding a trigger, changes smaller than 1.5% of its range accumulate relative to the last accepted value. The outer 1% snaps to fully open/closed. Each hand has independent state. Raw trigger readings remain in Quest samples, while the MCAP motor command is the limited setpoint sent to CAN. This setting limits setpoint speed, not gripping force.

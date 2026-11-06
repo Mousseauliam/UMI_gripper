@@ -1,16 +1,16 @@
-import json
 import math
 import struct
 import threading
 import time
 from pathlib import Path
-from .utils import save_json
 from .canbus import CanBus
-from .utils import finite, motor_id
+from .utils import finite, load_json, motor_id, save_json
 
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
+DEFAULT_TRAVEL_SECONDS = 0.45
+TRIGGER_DEADBAND = 0.05
 
 
 class Axis:
@@ -19,6 +19,7 @@ class Axis:
         self.active = self.vr = self.opening = self.released = False
         self.target = None
         self.command_target = None
+        self.trigger_value = 0.0
         self.telemetry = {}
         self.seen = self.started = 0
         self.voltage_at = 0
@@ -61,6 +62,7 @@ class Axis:
                 self.started = self.seen = time.monotonic()
                 self.vr = vr
                 self.released = False
+                self.trigger_value = 0.0
                 if vr:
                     self.opening = True
                     self.move(opened)
@@ -83,8 +85,15 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                a, b = self.config["opened"], self.config["closed"]
-                self.move(max(min(a, b), min(max(a, b), a + value * (b - a))))
+                if value <= 0.01:
+                    value = 0.0
+                elif value >= 0.99:
+                    value = 1.0
+                elif abs(value - self.trigger_value) < TRIGGER_DEADBAND:
+                    return
+                self.trigger_value = value
+                opened, closed = self.config["opened"], self.config["closed"]
+                self.move((1 - value) * opened + value * closed)
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -157,7 +166,8 @@ SIDES = {"left": 18, "right": 28}
 class Motor:
     def __init__(self, path, record):
         self.path = Path(path)
-        self.config = json.loads(self.path.read_text())
+        self.config = load_json(self.path)
+        self.config.setdefault("travel_seconds", DEFAULT_TRAVEL_SECONDS)
         self.bus = CanBus()
         self.lock = threading.RLock()
         self.record = record
@@ -291,6 +301,9 @@ class Motor:
                     if abs(position - c["opened"]) < abs(position - c["closed"])
                     else c["opened"]
                 )
+            elif name == "speed":
+                self.config["travel_seconds"] = finite(data["seconds"], 0.30, 1.20)
+                self.save()
             elif name == "select":
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de changer de moteur")
@@ -363,8 +376,12 @@ class Motor:
         self.bus.drain()
         for axis in active:
             axis.feedback(now)
+        elapsed = PERIOD if self.last_tick is None else min(now - self.last_tick, 0.02)
         for axis in active:
-            axis.command_target = axis.target
+            stroke = abs(axis.config["closed"] - axis.config["opened"])
+            max_step = stroke * elapsed / self.config["travel_seconds"]
+            error = axis.target - axis.command_target
+            axis.command_target += max(-max_step, min(max_step, error))
         commands = [(a.config["selected"], a.command_target, KP, KD) for a in active]
         self.bus.send_mit_batch(commands)
         stamp = time.monotonic_ns()

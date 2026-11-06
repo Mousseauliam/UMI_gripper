@@ -8,7 +8,7 @@ import time
 from aiohttp import web, WSMsgType
 from PIL import Image
 from .cameras import Cameras
-from .gripper import Motor
+from .gripper import KD, KP, PERIOD, Motor
 from .recording import Recorder
 from .export import Converter
 
@@ -51,7 +51,7 @@ class App:
             setup=self.setup["setup"],
             session=self.session,
             gripper_config=self.motor.config,
-            motor_control=dict(mode="MIT", kp=2.04, kd=0.178571, target_hz=200),
+            motor_control=dict(mode="MIT", kp=KP, kd=KD, target_hz=round(1 / PERIOD)),
             available_streams={k: c.state()["live"] for k, c in self.cameras.items.items()},
         )
 

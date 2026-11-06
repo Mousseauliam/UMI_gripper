@@ -83,6 +83,9 @@ function connect() {
     setTimeout(connect, 1500);
   };
 }
+$("travelTime").onchange = () =>
+  act("motor/speed", { seconds: Number($("travelTime").value) }).catch(() => {});
+
 function render(s) {
   state = s;
   const m = s.motor,
@@ -112,6 +115,8 @@ function render(s) {
     " rad · Closed: " +
     (m.config.closed?.toFixed(3) ?? "—") +
     " rad";
+  if (document.activeElement !== $("travelTime"))
+    $("travelTime").value = String(m.config.travel_seconds);
   const select = $("motorSelect");
   if (document.activeElement !== select) {
     const values = Object.keys(m.motors);
