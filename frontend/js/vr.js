@@ -440,11 +440,7 @@ else
           type: "sample",
           seq: ++seq,
           time: performance.now(),
-          triggers: Object.fromEntries(
-            [...session.inputSources]
-              .filter((s) => s.gamepad?.mapping === "xr-standard")
-              .map((s) => [s.handedness, s.gamepad.buttons[0].value]),
-          ),
+          triggers,
           reference: frameName,
           origin_epoch: originEpoch,
           recorded_frames: ["world", "head"],

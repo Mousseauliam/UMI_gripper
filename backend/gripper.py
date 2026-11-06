@@ -10,7 +10,7 @@ KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
 VR_RELEASE_SECONDS = 0.45
-CUP_HOLD_TORQUE = 1.2  # Nm, proportional closing torque on the right gripper
+CUP_HOLD_TORQUE = 1.0  # Nm, proportional closing torque on the right gripper
 # Radians from fully open at 0%, 25%, 50% and 75% jaw closure.
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
