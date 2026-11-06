@@ -31,6 +31,7 @@ class Axis:
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
         self.trigger_value = 0.0
+        self.contact_probe = None
         self.contact_trigger = None
         self.rumble = 0.0
         self.target = None
@@ -68,6 +69,7 @@ class Axis:
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
             self.kp = KP
+            self.contact_probe = None
             self.contact_trigger = None
             self.trigger_value = self.rumble = 0.0
             self.target = position
@@ -101,11 +103,22 @@ class Axis:
         if self.vr:
             error_threshold = 0.06
             touching = closing_torque > 0.15 and speed < 0.45
+            if self.contact_trigger is None:
+                if not touching or closing_error <= error_threshold:
+                    self.contact_probe = None
+                elif self.contact_probe is None or direction * self.target < self.contact_probe[0]:
+                    self.contact_probe = (direction * self.target, closing_error)
+                if self.contact_probe is not None:
+                    start, error = self.contact_probe
+                    touching = min(direction * self.target - start, closing_error - error) >= 0.03
+                    if self.trigger_value == 1.0 and closing_error > HOLD_ERROR_RAD:
+                        touching |= closing_torque > 0.4 and speed < 0.15
         else:
             error_threshold = HOLD_ERROR_RAD
             touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15
 
         if closing_error <= error_threshold:
+            self.contact_probe = None
             self.contact_trigger = None
             self.rumble = 0.0
             return KP
