@@ -54,7 +54,16 @@
           </div>
           <label>Measured jaw closure<select id="jawPercent"><option>25</option><option>50</option><option>75</option></select></label>
           <button id="saveJaw">Save current angle at selected %</button>
-          <label>Quest trigger reading at half press (%)<input id="triggerMid" type="number" min="10" max="90" step="1"></label>
+          <div class="row">
+            <button id="calLeft">Configurer gâchette gauche</button>
+            <button id="calRight">Configurer gâchette droite</button>
+          </div>
+          <dialog id="triggerDialog">
+            <h3 id="triggerTitle"></h3>
+            <p>Presse la gâchette jusqu’au bout à vitesse constante en environ 2 secondes, puis relâche-la complètement. Répète trois fois.</p>
+            <button id="calStart">Commencer dans le casque</button>
+            <button id="calCancel">Annuler</button>
+          </dialog>
           <p id="angles" class="hint"></p>
           <p id="motorError" class="err"></p>
         </section>

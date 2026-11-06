@@ -106,9 +106,7 @@ function render(s) {
   $("motorOff").disabled = !m.active;
   $("toggle").disabled = !m.active || m.vr;
   $("saveJaw").disabled = $("setOpen").disabled = $("setClosed").disabled = m.active;
-  $("triggerMid").disabled = m.active || m.scanning;
-  if (document.activeElement !== $("triggerMid"))
-    $("triggerMid").value = Math.round((m.config.trigger_midpoint ?? 0.5) * 100);
+  $("calLeft").disabled = $("calRight").disabled = m.active || m.scanning || r.recording;
   $("scan").disabled = m.active || m.scanning;
   $("scan").textContent = m.scanning ? "Detecting…" : "Detect motors";
   $("motorError").textContent = m.error;
@@ -175,8 +173,6 @@ for (const [id, action] of Object.entries({
   scan: "scan",
 }))
   $(id).onclick = () => act("motor/" + action).catch(() => {});
-$("triggerMid").onchange = () =>
-  act("motor/trigger-midpoint", { percent: Number($("triggerMid").value) }).catch(() => {});
 $("saveJaw").onclick = () =>
   act("motor/jaw-point", { percent: $("jawPercent").value }).catch(() => {});
 $("motorSelect").onchange = () =>

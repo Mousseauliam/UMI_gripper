@@ -44,9 +44,74 @@ class RecordButtons {
     return action;
   }
 }
+class TriggerCalibration {
+  constructor(side) {
+    this.side = side;
+    this.strokes = [];
+    this.samples = [];
+    this.armed = false;
+    this.hint = "Relâche complètement la gâchette";
+  }
+
+  update(time, value) {
+    if (this.saving) return;
+    const samples = this.samples;
+    const last = samples.at(-1);
+    if (value == null || (last && time - last.time > 150)) {
+      this.samples = [];
+      this.armed = false;
+      this.hint = "Reprends la manette et relâche la gâchette";
+      return;
+    }
+    if (value <= 0.01) {
+      this.armed = true;
+      this.samples = [];
+      this.restTime = time;
+      this.hint = "Presse lentement et régulièrement jusqu’au bout";
+      if (this.strokes.length === 3) {
+        this.saving = true;
+        return this.strokes[0].map((_, i) =>
+          this.strokes.map(stroke => stroke[i]).sort((a, b) => a - b)[1]);
+      }
+      return;
+    }
+    if (!this.armed) return;
+    if (!last) samples.push({time: this.restTime, value: 0});
+    samples.push({time, value});
+    const duration = time - samples[0].time;
+    if (duration > 5000 || (last && value < samples[0].peak - 0.05)) {
+      this.armed = false;
+      this.samples = [];
+      this.hint = "Essai interrompu · relâche et recommence";
+      return;
+    }
+    samples[0].peak = Math.max(samples[0].peak || 0, value);
+    if (value < 0.99) return;
+    this.armed = false;
+    this.samples = [];
+    if (duration < 700 || samples.length < 15) {
+      this.hint = "Trop rapide · relâche et recommence";
+      return;
+    }
+    const curve = [];
+    for (let i = 1; i < 10; i++) {
+      const t = samples[0].time + duration * i / 10;
+      const j = samples.findIndex(p => p.time >= t);
+      const a = samples[j - 1], b = samples[j];
+      curve.push(a.value + (b.value - a.value) * (t - a.time) / (b.time - a.time));
+    }
+    if (curve.some((v, i) => v <= (curve[i - 1] || 0) || v >= 1)) {
+      this.hint = "Mouvement irrégulier · relâche et recommence";
+      return;
+    }
+    this.strokes.push(curve);
+    this.hint = "Pression validée · relâche complètement";
+  }
+}
 if (typeof module !== "undefined") module.exports = RecordButtons;
 else
   (() => {
+    let calibration = null;
     let session = null,
       gl = null,
       layer = null,
@@ -164,7 +229,7 @@ else
       hudContext.textAlign = "center";
       hudContext.fillStyle = r?.recording ? "#ff6258" : "#ffffff";
       hudContext.fillText(
-        r?.recording
+        calibration ? (calibration.side === "left" ? "Gauche" : "Droite") + " · " + calibration.strokes.length + "/3" : r?.recording
           ? "● REC " + r.duration_s.toFixed(1) + " s"
           : r?.last.outcome
             ? "Saved · " + r.last.outcome
@@ -175,7 +240,7 @@ else
       hudContext.font = "36px sans-serif";
       hudContext.fillStyle = "#d1d6df";
       hudContext.fillText(
-        state?.motor.opening
+        calibration ? calibration.hint : state?.motor.opening
           ? "Release both triggers to control"
           : state?.recording.error || "B hold 2 s: not judged",
         512,
@@ -255,6 +320,7 @@ else
     }
     async function finish(reason = "VR ended") {
       const old = session;
+      calibration = null;
       session = null;
       ready = false;
       pending = false;
@@ -301,6 +367,18 @@ else
         }
         pose = xrFrame.getViewerPose(world);
         if (!pose) return;
+        if (calibration) {
+          const source = [...session.inputSources].find(s => s.handedness === calibration.side && s.gamepad?.mapping === "xr-standard");
+          const curve = calibration.update(time, source?.gamepad.buttons[0]?.value);
+          if (curve) {
+            const current = calibration;
+            current.hint = "Enregistrement…";
+            api("motor/trigger-curve", {side: current.side, curve})
+              .then(() => { if (calibration === current) finish("Calibration enregistrée"); })
+              .catch(e => { if (calibration === current) finish(e.message); });
+          }
+          return;
+        }
         const right = [...session.inputSources].find(
           (s) =>
             s.handedness === "right" && s.gamepad?.mapping === "xr-standard",
@@ -355,7 +433,7 @@ else
         if (session && pose && session.visibilityState === "visible") {
           try {
             draw(pose);
-            captureTick();
+            if (!calibration) captureTick();
           } catch (e) {
             finish(e.message);
           }
@@ -366,7 +444,21 @@ else
       if (session && framesStarted && performance.now() - lastFrame > 1500)
         finish("VR frames lost · Motor OFF");
     }, 200);
-    $("enterVR").onclick = async () => {
+    let chosenSide;
+    for (const [id, side] of [["calLeft", "left"], ["calRight", "right"]]) {
+      $(id).onclick = () => {
+        chosenSide = side;
+        $("triggerTitle").textContent = $(id).textContent;
+        $("triggerDialog").showModal();
+      };
+    }
+    $("calCancel").onclick = () => $("triggerDialog").close();
+    $("calStart").onclick = () => {
+      $("triggerDialog").close();
+      startSession(chosenSide);
+    };
+    $("enterVR").onclick = () => startSession();
+    async function startSession(side) {
       try {
         if (session) {
           await finish();
@@ -376,6 +468,7 @@ else
           throw Error("Open the HTTPS address in Quest Browser");
         if (ws?.readyState !== 1) throw Error("Raspberry disconnected");
         $("enterVR").disabled = true;
+        calibration = side ? new TriggerCalibration(side) : null;
         session = await navigator.xr.requestSession("immersive-ar", {
           optionalFeatures: ["local-floor"],
         });

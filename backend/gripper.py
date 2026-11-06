@@ -10,6 +10,7 @@ KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
 DEFAULT_TRAVEL_SECONDS = 0.45
+
 def jaw_angle(value, config):
     opened, closed = config["opened"], config["closed"]
     points = config.get("jaw_points") or {}
@@ -93,11 +94,12 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                midpoint = self.config.get("trigger_midpoint") or 0.5
-                if value <= midpoint:
-                    closure = 0.5 * value / midpoint
-                else:
-                    closure = 0.5 + 0.5 * (value - midpoint) / (1 - midpoint)
+                curve = self.config.get("trigger_curve") or [self.config.get("trigger_midpoint") or 0.5]
+                anchors = [0, *curve, 1]
+                for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
+                    if value <= high:
+                        closure = (index + (value - low) / (high - low)) / (len(anchors) - 1)
+                        break
                 self.move(jaw_angle(closure, self.config))
 
     def feedback(self, now):
@@ -212,7 +214,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_midpoint")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_midpoint", "trigger_curve")
             }
         save_json(self.path, self.config)
 
@@ -306,10 +308,13 @@ class Motor:
                     if abs(position - c["opened"]) < abs(position - c["closed"])
                     else c["opened"]
                 )
-            elif name == "trigger-midpoint":
+            elif name == "trigger-curve":
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de calibrer la gâchette")
-                axis.config["trigger_midpoint"] = finite(data["percent"], 10, 90) / 100
+                curve = [finite(v, 0, 1) for v in data["curve"]]
+                if len(curve) != 9 or any(a >= b for a, b in zip([0, *curve], [*curve, 1])):
+                    raise ValueError("Courbe de gâchette invalide")
+                self.axis(SIDES[data["side"]]).config["trigger_curve"] = curve
                 self.save()
             elif name == "speed":
                 self.config["travel_seconds"] = finite(data["seconds"], 0.30, 1.20)
