@@ -10,7 +10,7 @@ KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
 SOFT_HOLD_KP = 0.4
-HOLD_KP = 1.0
+HOLD_KP = 1.2
 TOUCH_RUMBLE = 0.25
 HOLD_ERROR_RAD = 0.49
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
@@ -98,14 +98,19 @@ class Axis:
         closing_error = direction * (self.target - self.telemetry["position"])
         speed = abs(self.telemetry.get("velocity", math.inf))
         closing_torque = direction * self.telemetry.get("torque", 0.0)
-        touching = closing_error > 0.06 and closing_torque > 0.15 and speed < 0.45
-        self.rumble = TOUCH_RUMBLE if self.vr and touching else 0.0
-        if closing_error <= HOLD_ERROR_RAD or (not self.vr and self.config["selected"] != 28):
-            self.contact_trigger = None
-            return KP
+        if self.vr:
+            error_threshold = 0.06
+            touching = closing_torque > 0.15 and speed < 0.45
+        else:
+            error_threshold = HOLD_ERROR_RAD
+            touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15
 
+        if closing_error <= error_threshold:
+            self.contact_trigger = None
+            self.rumble = 0.0
+            return KP
         if self.contact_trigger is None:
-            if speed >= 0.15 or closing_torque <= 0.4:
+            if not touching:
                 return KP
             self.contact_trigger = self.trigger_value
 
