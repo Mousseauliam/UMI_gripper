@@ -9,7 +9,8 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
-HOLD_KP = 0.8
+SOFT_HOLD_KP = 0.4
+HOLD_KP = 1.0
 HOLD_ERROR_RAD = 0.49
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
@@ -28,6 +29,9 @@ class Axis:
     def __init__(self, config, bus, lock, record):
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
+        self.trigger_value = 0.0
+        self.contact_trigger = None
+        self.rumble = 0.0
         self.target = None
         self.kp = KP
         self.telemetry = {}
@@ -63,6 +67,8 @@ class Axis:
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
             self.kp = KP
+            self.contact_trigger = None
+            self.trigger_value = self.rumble = 0.0
             self.target = position
             self.telemetry = dict(position=position, voltage=voltage)
             self.bus.faults.pop(mid, None)
@@ -87,17 +93,25 @@ class Axis:
         self.target = finite(position, min(c["opened"], c["closed"]), max(c["opened"], c["closed"]))
 
     def command_kp(self):
-        if self.config["selected"] == 28:
-            direction = math.copysign(1, self.config["closed"] - self.config["opened"])
-            closing_error = direction * (self.target - self.telemetry["position"])
-            if closing_error > HOLD_ERROR_RAD:
-                if self.kp == HOLD_KP:
-                    return HOLD_KP
-                speed = abs(self.telemetry.get("velocity", math.inf))
-                closing_torque = direction * self.telemetry.get("torque", 0.0)
-                if speed < 0.15 and closing_torque > 0.4:
-                    return HOLD_KP
-        return KP
+        direction = math.copysign(1, self.config["closed"] - self.config["opened"])
+        closing_error = direction * (self.target - self.telemetry["position"])
+        if closing_error <= HOLD_ERROR_RAD or (not self.vr and self.config["selected"] != 28):
+            self.contact_trigger = None
+            self.rumble = 0.0
+            return KP
+
+        if self.contact_trigger is None:
+            speed = abs(self.telemetry.get("velocity", math.inf))
+            closing_torque = direction * self.telemetry.get("torque", 0.0)
+            if speed >= 0.15 or closing_torque <= 0.4:
+                return KP
+            self.contact_trigger = self.trigger_value
+
+        if not self.vr or self.contact_trigger >= 1.0:
+            return HOLD_KP
+        pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
+        self.rumble = 0.12 + 0.68 * pressure
+        return SOFT_HOLD_KP + (HOLD_KP - SOFT_HOLD_KP) * pressure
 
     def trigger(self, value):
         with self.lock:
@@ -111,6 +125,7 @@ class Axis:
                 self.set_trigger_target(value)
 
     def set_trigger_target(self, value):
+        self.trigger_value = value
         anchors = [0, *(self.config.get("trigger_curve") or []), 1]
         for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
             if value <= high:
@@ -376,6 +391,7 @@ class Motor:
                 side: dict(
                     id=mid,
                     detected=mid in self.motors,
+                    rumble=self.axes[mid].rumble if mid in self.axes and self.axes[mid].vr else 0.0,
                     active=self.axes[mid].active if mid in self.axes else False,
                     opening=self.axes[mid].opening if mid in self.axes else False,
                     released=self.axes[mid].released if mid in self.axes else False,

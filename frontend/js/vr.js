@@ -368,6 +368,22 @@ else
     }
     window.stopVR = finish;
     listeners.add((d) => {
+      if (d.type === "state" && ready && session?.visibilityState === "visible") {
+        for (const source of session.inputSources) {
+          const strength = d.motor.grippers[source.handedness]?.rumble;
+          if (!strength) continue;
+          const pad = source.gamepad;
+          const actuator = pad?.hapticActuators?.[0];
+          try {
+            const effect = actuator?.pulse
+              ? actuator.pulse(strength, 120)
+              : pad?.vibrationActuator?.playEffect?.("dual-rumble", {
+                  duration: 120, weakMagnitude: strength, strongMagnitude: strength,
+                });
+            effect?.catch(() => {});
+          } catch {}
+        }
+      }
       if (d.type === "vr_ready") {
         ready = true;
         starting = false;
