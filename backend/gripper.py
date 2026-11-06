@@ -110,7 +110,7 @@ class Axis:
                     self.contact_probe = (direction * self.target, closing_error)
                 if self.contact_probe is not None:
                     start, error = self.contact_probe
-                    touching = min(direction * self.target - start, closing_error - error) >= 0.03
+                    touching = min(direction * self.target - start, closing_error - error) >= 0.04
                     if self.trigger_value == 1.0 and closing_error > HOLD_ERROR_RAD:
                         touching |= closing_torque > 0.4 and speed < 0.15
         else:
