@@ -9,8 +9,8 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
-CUP_HOLD_TORQUE = 1.0  # Nm, proportional closing torque on the right gripper
-# Radians from fully open at 0%, 25%, 50% and 75% jaw closure.
+HOLD_KP = 1.05
+HOLD_ERROR_RAD = 0.49
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
 
@@ -90,8 +90,8 @@ class Axis:
         if self.config["selected"] == 28:
             direction = math.copysign(1, self.config["closed"] - self.config["opened"])
             closing_error = direction * (self.target - self.telemetry["position"])
-            if closing_error > CUP_HOLD_TORQUE / KP:
-                return CUP_HOLD_TORQUE / closing_error
+            if closing_error > HOLD_ERROR_RAD:
+                return HOLD_KP
         return KP
 
     def trigger(self, value):
