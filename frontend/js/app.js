@@ -179,7 +179,16 @@ for (const name of [
   const figure = document.createElement("figure"),
     img = document.createElement("img"),
     caption = document.createElement("figcaption");
-  img.src = "/camera/" + name + ".mjpg";
+  const url = "/camera/" + name + ".mjpg";
+  if (location.protocol === "http:") {
+    const refresh = () => {
+      if (!document.hidden && img.complete && state?.cameras[name]?.live)
+        img.src = url + "?snapshot=1&t=" + Date.now();
+    };
+    setInterval(refresh, 500);
+  } else {
+    img.src = url;
+  }
   img.alt = name;
   caption.id = "cam_" + name;
   caption.textContent = name;

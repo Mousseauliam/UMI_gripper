@@ -9,7 +9,6 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
-VR_RELEASE_SECONDS = 0.45
 CUP_HOLD_TORQUE = 1.0  # Nm, proportional closing torque on the right gripper
 # Radians from fully open at 0%, 25%, 50% and 75% jaw closure.
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
@@ -29,7 +28,7 @@ class Axis:
     def __init__(self, config, bus, lock, record):
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
-        self.target = self.command_angle = None
+        self.target = None
         self.kp = KP
         self.telemetry = {}
         self.seen = self.started = 0
@@ -64,7 +63,7 @@ class Axis:
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
             self.kp = KP
-            self.target = self.command_angle = position
+            self.target = position
             self.telemetry = dict(position=position, voltage=voltage)
             self.bus.faults.pop(mid, None)
             self.active = True
@@ -87,19 +86,10 @@ class Axis:
         c = self.config
         self.target = finite(position, min(c["opened"], c["closed"]), max(c["opened"], c["closed"]))
 
-    def next_command(self, dt):
-        opening_range = self.config["opened"] - self.config["closed"]
-        delta = self.target - self.command_angle
-        if self.vr and self.released and delta * opening_range > 0:
-            step = abs(opening_range) * dt / VR_RELEASE_SECONDS
-            if abs(delta) > step:
-                return self.command_angle + math.copysign(step, delta)
-        return self.target
-
     def command_kp(self):
         if self.config["selected"] == 28:
             direction = math.copysign(1, self.config["closed"] - self.config["opened"])
-            closing_error = direction * (self.command_angle - self.telemetry["position"])
+            closing_error = direction * (self.target - self.telemetry["position"])
             if closing_error > CUP_HOLD_TORQUE / KP:
                 return CUP_HOLD_TORQUE / closing_error
         return KP
@@ -113,12 +103,15 @@ class Axis:
             self.released = self.released or value <= 0.02
             if self.released:
                 self.opening = False
-                anchors = [0, *(self.config.get("trigger_curve") or []), 1]
-                for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
-                    if value <= high:
-                        closure = (index + (value - low) / (high - low)) / (len(anchors) - 1)
-                        self.move(jaw_angle(closure, self.config))
-                        break
+                self.set_trigger_target(value)
+
+    def set_trigger_target(self, value):
+        anchors = [0, *(self.config.get("trigger_curve") or []), 1]
+        for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
+            if value <= high:
+                closure = (index + (value - low) / (high - low)) / (len(anchors) - 1)
+                self.move(jaw_angle(closure, self.config))
+                break
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -151,7 +144,7 @@ class Axis:
             control_mode="MIT",
             kp=self.kp,
             kd=KD,
-            target=self.command_angle,
+            target=self.target,
             requested_target=self.target,
             velocity_target=0.0,
             torque_ff=0.0,
@@ -324,11 +317,8 @@ class Motor:
                     raise ValueError("Quitter le mode VR")
                 c = axis.config
                 position = axis.target if axis.target is not None else axis.telemetry["position"]
-                axis.move(
-                    c["closed"]
-                    if abs(position - c["opened"]) < abs(position - c["closed"])
-                    else c["opened"]
-                )
+                near_open = abs(position - c["opened"]) < abs(position - c["closed"])
+                axis.set_trigger_target(1.0 if near_open else 0.0)
             elif name == "trigger-curve":
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de calibrer la gâchette")
@@ -409,15 +399,13 @@ class Motor:
         self.bus.drain()
         for axis in active:
             axis.feedback(now)
-        dt = PERIOD if self.last_tick is None else min(now - self.last_tick, 4 * PERIOD)
         for axis in active:
-            axis.command_angle = axis.next_command(dt)
             axis.kp = axis.command_kp()
-        commands = [(a.config["selected"], a.command_angle, a.kp, KD) for a in active]
+        commands = [(a.config["selected"], a.target, a.kp, KD) for a in active]
         self.bus.send_mit_batch(commands)
         stamp = time.monotonic_ns()
         for axis in active:
-            self.record.motor_command(axis.config, axis.command_angle, stamp)
+            self.record.motor_command(axis.config, axis.target, stamp)
         if now >= self.voltage_next:
             axis = active[self.voltage_index % len(active)]
             self.bus.send(17, axis.config["selected"], struct.pack("<HHI", 0x701C, 0, 0))

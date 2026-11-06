@@ -128,6 +128,10 @@ class App:
         camera = self.cameras.items.get(r.match_info["name"])
         if not camera:
             raise web.HTTPNotFound()
+        if r.query.get("snapshot") == "1":
+            if camera.frame is None:
+                return web.Response(status=204)
+            return web.Response(body=camera.frame, content_type="image/jpeg")
         response = web.StreamResponse(
             headers={
                 "Content-Type": "multipart/x-mixed-replace; boundary=frame",

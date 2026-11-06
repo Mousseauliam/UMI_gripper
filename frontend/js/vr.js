@@ -383,11 +383,7 @@ else
       try {
         syncClock();
         if (session.visibilityState !== "visible") {
-          if (ready || starting) {
-            send({ type: "vr_stop" });
-            ready = starting = pending = false;
-          }
-          info("VR en pause : fermer le menu du casque pour reprendre");
+          if (ready || starting) finish("VR interrompue · Motor OFF. Relancer Enter VR pour reprendre.");
           return;
         }
         pose = xrFrame.getViewerPose(world);
