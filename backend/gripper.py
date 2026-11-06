@@ -11,6 +11,7 @@ KD = 0.178571
 PERIOD = 0.005
 SOFT_HOLD_KP = 0.4
 HOLD_KP = 1.0
+TOUCH_RUMBLE = 0.25
 HOLD_ERROR_RAD = 0.49
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
@@ -95,22 +96,26 @@ class Axis:
     def command_kp(self):
         direction = math.copysign(1, self.config["closed"] - self.config["opened"])
         closing_error = direction * (self.target - self.telemetry["position"])
+        speed = abs(self.telemetry.get("velocity", math.inf))
+        closing_torque = direction * self.telemetry.get("torque", 0.0)
+        touching = closing_error > 0.06 and closing_torque > 0.15 and speed < 0.45
+        self.rumble = TOUCH_RUMBLE if self.vr and touching else 0.0
         if closing_error <= HOLD_ERROR_RAD or (not self.vr and self.config["selected"] != 28):
             self.contact_trigger = None
-            self.rumble = 0.0
             return KP
 
         if self.contact_trigger is None:
-            speed = abs(self.telemetry.get("velocity", math.inf))
-            closing_torque = direction * self.telemetry.get("torque", 0.0)
             if speed >= 0.15 or closing_torque <= 0.4:
                 return KP
             self.contact_trigger = self.trigger_value
 
-        if not self.vr or self.contact_trigger >= 1.0:
+        if not self.vr:
+            return HOLD_KP
+        if self.contact_trigger >= 1.0:
+            self.rumble = 0.8 * self.trigger_value
             return HOLD_KP
         pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
-        self.rumble = 0.12 + 0.68 * pressure
+        self.rumble = TOUCH_RUMBLE + (0.8 - TOUCH_RUMBLE) * pressure
         return SOFT_HOLD_KP + (HOLD_KP - SOFT_HOLD_KP) * pressure
 
     def trigger(self, value):

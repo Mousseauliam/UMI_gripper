@@ -373,7 +373,7 @@ else
           const strength = d.motor.grippers[source.handedness]?.rumble;
           if (!strength) continue;
           const pad = source.gamepad;
-          const actuator = pad?.hapticActuators?.[0];
+          const actuator = pad?.hapticActuators?.[0] ?? pad?.vibrationActuator;
           try {
             const effect = actuator?.pulse
               ? actuator.pulse(strength, 120)
