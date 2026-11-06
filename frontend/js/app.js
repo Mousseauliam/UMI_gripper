@@ -83,9 +83,6 @@ function connect() {
     setTimeout(connect, 1500);
   };
 }
-$("travelTime").onchange = () =>
-  act("motor/speed", { seconds: Number($("travelTime").value) }).catch(() => {});
-
 function render(s) {
   state = s;
   const m = s.motor,
@@ -105,7 +102,7 @@ function render(s) {
   $("motorOn").disabled = m.active || m.scanning;
   $("motorOff").disabled = !m.active;
   $("toggle").disabled = !m.active || m.vr;
-  $("saveJaw").disabled = $("setOpen").disabled = $("setClosed").disabled = m.active;
+  $("setOpen").disabled = $("setClosed").disabled = m.active;
   $("calLeft").disabled = $("calRight").disabled = m.active || m.scanning || r.recording;
   $("scan").disabled = m.active || m.scanning;
   $("scan").textContent = m.scanning ? "Detecting…" : "Detect motors";
@@ -114,10 +111,7 @@ function render(s) {
     "Open: " +
     (m.config.opened?.toFixed(3) ?? "—") +
     " rad · Closed: " +
-    (m.config.closed?.toFixed(3) ?? "—") +
-    " rad · Jaw calibration: " + (Object.keys(m.config.jaw_points || {}).map(p => p + "%").join(", ") || "estimated");
-  if (document.activeElement !== $("travelTime"))
-    $("travelTime").value = String(m.config.travel_seconds);
+    (m.config.closed?.toFixed(3) ?? "—") + " rad";
   const select = $("motorSelect");
   if (document.activeElement !== select) {
     const values = Object.keys(m.motors);
@@ -173,8 +167,6 @@ for (const [id, action] of Object.entries({
   scan: "scan",
 }))
   $(id).onclick = () => act("motor/" + action).catch(() => {});
-$("saveJaw").onclick = () =>
-  act("motor/jaw-point", { percent: $("jawPercent").value }).catch(() => {});
 $("motorSelect").onchange = () =>
   act("motor/select", { id: Number($("motorSelect").value) }).catch(() => {});
 for (const name of [

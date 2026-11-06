@@ -9,19 +9,18 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
-DEFAULT_TRAVEL_SECONDS = 0.45
+# Radians from fully open at 0%, 25%, 50% and 75% jaw closure.
+JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
+
 
 def jaw_angle(value, config):
     opened, closed = config["opened"], config["closed"]
-    points = config.get("jaw_points") or {}
-    if not points:
-        fraction = math.acos(1 - 2 * value) / math.pi
-        return opened + fraction * (closed - opened)
-    anchors = [(0.0, opened), *sorted((int(p) / 100, a) for p, a in points.items()), (1.0, closed)]
-    for (start, a), (end, b) in zip(anchors, anchors[1:]):
-        if value <= end:
-            return a + (b - a) * (value - start) / (end - start)
-
+    stroke = abs(closed - opened)
+    offsets = [min(offset, stroke) for offset in JAW_OFFSETS] + [stroke]
+    segment = min(int(value * 4), 3)
+    progress = value * 4 - segment
+    offset = offsets[segment] + progress * (offsets[segment + 1] - offsets[segment])
+    return opened + math.copysign(offset, closed - opened)
 
 
 class Axis:
@@ -29,7 +28,6 @@ class Axis:
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
         self.target = None
-        self.command_target = None
         self.telemetry = {}
         self.seen = self.started = 0
         self.voltage_at = 0
@@ -62,7 +60,7 @@ class Axis:
             voltage = self.bus.read(mid, 0x701C)
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
-            self.target = self.command_target = position
+            self.target = position
             self.telemetry = dict(position=position, voltage=voltage)
             self.bus.faults.pop(mid, None)
             self.active = True
@@ -132,7 +130,7 @@ class Axis:
             control_mode="MIT",
             kp=KP,
             kd=KD,
-            target=self.command_target,
+            target=self.target,
             requested_target=self.target,
             velocity_target=0.0,
             torque_ff=0.0,
@@ -173,7 +171,10 @@ class Motor:
     def __init__(self, path, record):
         self.path = Path(path)
         self.config = load_json(self.path)
-        self.config.setdefault("travel_seconds", DEFAULT_TRAVEL_SECONDS)
+        self.config.pop("travel_seconds", None)
+        for calibration in self.config["grippers"].values():
+            calibration.pop("jaw_points", None)
+            calibration.pop("trigger_midpoint", None)
         self.bus = CanBus()
         self.lock = threading.RLock()
         self.record = record
@@ -213,7 +214,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid", "jaw_points", "trigger_curve")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid", "trigger_curve")
             }
         save_json(self.path, self.config)
 
@@ -315,9 +316,6 @@ class Motor:
                     raise ValueError("Courbe de gâchette invalide")
                 self.axis(SIDES[data["side"]]).config["trigger_curve"] = curve
                 self.save()
-            elif name == "speed":
-                self.config["travel_seconds"] = finite(data["seconds"], 0.30, 1.20)
-                self.save()
             elif name == "select":
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de changer de moteur")
@@ -329,26 +327,12 @@ class Motor:
                 self.axis(mid).config["uid"] = uid
                 self.config["selected"] = mid
                 self.save()
-            elif name in ("opened", "closed", "jaw-point"):
+            elif name in ("opened", "closed"):
                 if self.active:
                     raise ValueError("Passer Motor OFF avant de définir les angles")
-                position = finite(
+                axis.config[name] = finite(
                     self.bus.read(axis.config["selected"], 0x7019), -12.5, 12.5
                 )
-                if name == "jaw-point":
-                    percent = str(data["percent"])
-                    if percent not in ("25", "50", "75"):
-                        raise ValueError("Choisir 25, 50 ou 75 %")
-                    opened, closed = axis.positions()
-                    points = dict(axis.config.get("jaw_points") or {})
-                    points[percent] = position
-                    angles = [opened, *(points[k] for k in sorted(points)), closed]
-                    if any((b - a) * (closed - opened) <= 0 for a, b in zip(angles, angles[1:])):
-                        raise ValueError("Vérifier la position et l'ordre des points de calibration")
-                    axis.config["jaw_points"] = points
-                else:
-                    axis.config[name] = position
-                    axis.config["jaw_points"] = {}
                 self.save()
             else:
                 raise ValueError("Commande inconnue")
@@ -404,17 +388,11 @@ class Motor:
         self.bus.drain()
         for axis in active:
             axis.feedback(now)
-        elapsed = PERIOD if self.last_tick is None else min(now - self.last_tick, 0.02)
-        for axis in active:
-            stroke = abs(axis.config["closed"] - axis.config["opened"])
-            max_step = stroke * elapsed / self.config["travel_seconds"]
-            error = axis.target - axis.command_target
-            axis.command_target += max(-max_step, min(max_step, error))
-        commands = [(a.config["selected"], a.command_target, KP, KD) for a in active]
+        commands = [(a.config["selected"], a.target, KP, KD) for a in active]
         self.bus.send_mit_batch(commands)
         stamp = time.monotonic_ns()
         for axis in active:
-            self.record.motor_command(axis.config, axis.command_target, stamp)
+            self.record.motor_command(axis.config, axis.target, stamp)
         if now >= self.voltage_next:
             axis = active[self.voltage_index % len(active)]
             self.bus.send(17, axis.config["selected"], struct.pack("<HHI", 0x701C, 0, 0))
