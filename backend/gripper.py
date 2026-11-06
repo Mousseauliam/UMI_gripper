@@ -9,6 +9,8 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04
 KD = 0.178571
 PERIOD = 0.005
+VR_RELEASE_SECONDS = 0.45
+CUP_HOLD_TORQUE = 1.2  # Nm, proportional closing torque on the right gripper
 # Radians from fully open at 0%, 25%, 50% and 75% jaw closure.
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
 
@@ -27,7 +29,8 @@ class Axis:
     def __init__(self, config, bus, lock, record):
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
-        self.target = None
+        self.target = self.command_angle = None
+        self.kp = KP
         self.telemetry = {}
         self.seen = self.started = 0
         self.voltage_at = 0
@@ -60,7 +63,8 @@ class Axis:
             voltage = self.bus.read(mid, 0x701C)
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
-            self.target = position
+            self.kp = KP
+            self.target = self.command_angle = position
             self.telemetry = dict(position=position, voltage=voltage)
             self.bus.faults.pop(mid, None)
             self.active = True
@@ -82,6 +86,23 @@ class Axis:
             raise ValueError("Motor OFF")
         c = self.config
         self.target = finite(position, min(c["opened"], c["closed"]), max(c["opened"], c["closed"]))
+
+    def next_command(self, dt):
+        opening_range = self.config["opened"] - self.config["closed"]
+        delta = self.target - self.command_angle
+        if self.vr and self.released and delta * opening_range > 0:
+            step = abs(opening_range) * dt / VR_RELEASE_SECONDS
+            if abs(delta) > step:
+                return self.command_angle + math.copysign(step, delta)
+        return self.target
+
+    def command_kp(self):
+        if self.config["selected"] == 28:
+            direction = math.copysign(1, self.config["closed"] - self.config["opened"])
+            closing_error = direction * (self.command_angle - self.telemetry["position"])
+            if closing_error > CUP_HOLD_TORQUE / KP:
+                return CUP_HOLD_TORQUE / closing_error
+        return KP
 
     def trigger(self, value):
         with self.lock:
@@ -128,9 +149,9 @@ class Axis:
             voltage=voltage,
             stamp_ns=status["stamp_ns"],
             control_mode="MIT",
-            kp=KP,
+            kp=self.kp,
             kd=KD,
-            target=self.target,
+            target=self.command_angle,
             requested_target=self.target,
             velocity_target=0.0,
             torque_ff=0.0,
@@ -158,7 +179,7 @@ class Axis:
             temperature=temperature,
             stamp_ns=time.monotonic_ns(),
             control_mode="MIT",
-            kp=KP,
+            kp=self.kp,
             kd=KD,
         )
         self.record.motor_state(self.config, self.telemetry)
@@ -388,11 +409,15 @@ class Motor:
         self.bus.drain()
         for axis in active:
             axis.feedback(now)
-        commands = [(a.config["selected"], a.target, KP, KD) for a in active]
+        dt = PERIOD if self.last_tick is None else min(now - self.last_tick, 4 * PERIOD)
+        for axis in active:
+            axis.command_angle = axis.next_command(dt)
+            axis.kp = axis.command_kp()
+        commands = [(a.config["selected"], a.command_angle, a.kp, KD) for a in active]
         self.bus.send_mit_batch(commands)
         stamp = time.monotonic_ns()
         for axis in active:
-            self.record.motor_command(axis.config, axis.target, stamp)
+            self.record.motor_command(axis.config, axis.command_angle, stamp)
         if now >= self.voltage_next:
             axis = active[self.voltage_index % len(active)]
             self.bus.send(17, axis.config["selected"], struct.pack("<HHI", 0x701C, 0, 0))
