@@ -91,7 +91,12 @@ class Axis:
             direction = math.copysign(1, self.config["closed"] - self.config["opened"])
             closing_error = direction * (self.target - self.telemetry["position"])
             if closing_error > HOLD_ERROR_RAD:
-                return HOLD_KP
+                if self.kp == HOLD_KP:
+                    return HOLD_KP
+                speed = abs(self.telemetry.get("velocity", math.inf))
+                closing_torque = direction * self.telemetry.get("torque", 0.0)
+                if speed < 0.15 and closing_torque > 0.4:
+                    return HOLD_KP
         return KP
 
     def trigger(self, value):
