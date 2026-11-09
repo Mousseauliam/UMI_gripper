@@ -13,7 +13,6 @@ SOFT_HOLD_KP = 0.4  # N·m/rad
 HOLD_KP = 1.2  # N·m/rad
 TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.4  # rad
-CONTACT_CONFIRMATION_RAD = 0.1  # rad of additional commanded closure and tracking error
 TOUCHING_TORQUE = 0.3  # N·m
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)  # rad from open at 0, 25, 50 and 75% closure
 
@@ -33,7 +32,6 @@ class Axis:
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
         self.active = self.vr = self.opening = self.released = False
         self.trigger_value = 0.0
-        self.contact_probe = None
         self.contact_trigger = None
         self.rumble = 0.0
         self.target = None
@@ -71,7 +69,6 @@ class Axis:
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
             self.kp = KP
-            self.contact_probe = None
             self.contact_trigger = None
             self.trigger_value = self.rumble = 0.0
             self.target = position
@@ -100,27 +97,16 @@ class Axis:
     def command_kp(self):
         direction = math.copysign(1, self.config["closed"] - self.config["opened"])
         closing_error = direction * (self.target - self.telemetry["position"])
-        speed = abs(self.telemetry.get("velocity", math.inf))
         closing_torque = direction * self.telemetry.get("torque", 0.0)
         if self.vr:
-            error_threshold = 0.06  # rad
-            touching = closing_torque > TOUCHING_TORQUE and speed < 0.45  # torque in N·m, speed in rad/s
-            if self.contact_trigger is None:
-                if not touching or closing_error <= error_threshold:
-                    self.contact_probe = None
-                elif self.contact_probe is None or direction * self.target < self.contact_probe[0]:
-                    self.contact_probe = (direction * self.target, closing_error)
-                if self.contact_probe is not None:
-                    start, error = self.contact_probe
-                    touching = min(direction * self.target - start, closing_error - error) >= CONTACT_CONFIRMATION_RAD
-                    if self.trigger_value == 1.0 and closing_error > HOLD_ERROR_RAD:
-                        touching |= closing_torque > 0.4 and speed < 0.15  # torque in N·m, speed in rad/s
+            error_threshold = 0.06  # rad, release an existing contact
+            touching = closing_torque > TOUCHING_TORQUE and closing_error >= HOLD_ERROR_RAD
         else:
+            speed = abs(self.telemetry.get("velocity", math.inf))
             error_threshold = HOLD_ERROR_RAD
             touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15  # torque in N·m, speed in rad/s
 
         if closing_error <= error_threshold:
-            self.contact_probe = None
             self.contact_trigger = None
             self.rumble = 0.0
             return KP
