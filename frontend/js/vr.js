@@ -54,6 +54,12 @@ else
       return 0.45 * raw + 0.55 * exponential;
     }
 
+    function lockGuideStrength(raw, target) {
+      if (!Number.isFinite(raw) || raw <= 0.01) return 0;
+      const distance = Math.abs(correctedTrigger(raw) - target);
+      return 0.6 * Math.max(0, 1 - distance / 0.08);
+    }
+
     function triggerCommand(source, willSend) {
       const { handedness, gamepad } = source;
       const value = correctedTrigger(gamepad.buttons[0].value);
@@ -309,7 +315,10 @@ else
     listeners.add((d) => {
       if (d.type === "state" && ready && session?.visibilityState === "visible") {
         for (const source of session.inputSources) {
-          const strength = d.motor.grippers[source.handedness]?.rumble;
+          const lock = triggerLocks.get(source.handedness);
+          const strength = lock?.locked && lock.source === source
+            ? lockGuideStrength(source.gamepad?.buttons[0]?.value, lock.value)
+            : d.motor.grippers[source.handedness]?.rumble;
           if (!strength) continue;
           const pad = source.gamepad;
           const actuator = pad?.hapticActuators?.[0] ?? pad?.vibrationActuator;
