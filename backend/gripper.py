@@ -11,9 +11,10 @@ KD = 0.178571  # N·m·s/rad
 PERIOD = 0.005  # s (5 ms, 200 Hz)
 SOFT_HOLD_KP = 0.4  # N·m/rad
 HOLD_KP = 1.2  # N·m/rad
-TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
+TOUCH_RUMBLE = 0.10  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.2  # rad
 TOUCHING_TORQUE = 0.3  # N·m
+CONTACT_MAX_SPEED = 0.20  # rad/s, measured motor speed
 # Normalized motor travel from the STEP linkage, sampled at closure = (i / 32)**2.
 STEP_MOTOR_TRAVEL = (
     0.0000000, 0.0042026, 0.0160694, 0.0338792, 0.0558120, 0.0804323,
@@ -44,6 +45,7 @@ class Axis:
         self.active = self.vr = self.opening = self.released = False
         self.trigger_value = 0.0
         self.contact_trigger = None
+        self.contact_candidate_sequence = None
         self.rumble = 0.0
         self.target = None
         self.kp = KP
@@ -81,6 +83,7 @@ class Axis:
             self.bus.write(mid, 0x7028, 20000, "I")
             self.kp = KP
             self.contact_trigger = None
+            self.contact_candidate_sequence = None
             self.trigger_value = self.rumble = 0.0
             self.target = position
             self.telemetry = dict(position=position, voltage=voltage)
@@ -111,7 +114,16 @@ class Axis:
         closing_torque = direction * self.telemetry.get("torque", 0.0)
         if self.vr:
             error_threshold = 0.06  # rad, release an existing contact
-            touching = closing_torque > TOUCHING_TORQUE and closing_error >= HOLD_ERROR_RAD
+            touching = (
+                closing_torque > TOUCHING_TORQUE
+                and closing_error >= HOLD_ERROR_RAD
+                and abs(self.telemetry.get("velocity", math.inf)) <= CONTACT_MAX_SPEED
+            )
+            if not touching:
+                self.contact_candidate_sequence = None
+            elif self.contact_candidate_sequence is None:
+                self.contact_candidate_sequence = self.feedback_sequence
+            touching = touching and self.feedback_sequence != self.contact_candidate_sequence
         else:
             speed = abs(self.telemetry.get("velocity", math.inf))
             error_threshold = HOLD_ERROR_RAD
@@ -119,6 +131,7 @@ class Axis:
 
         if closing_error <= error_threshold:
             self.contact_trigger = None
+            self.contact_candidate_sequence = None
             self.rumble = 0.0
             return KP
         if self.contact_trigger is None:
@@ -129,10 +142,10 @@ class Axis:
         if not self.vr:
             return HOLD_KP
         if self.contact_trigger >= 1.0:
-            self.rumble = 0.8 * self.trigger_value  # vibration amplitude (0 to 1)
+            self.rumble = self.trigger_value  # vibration amplitude (0 to 1)
             return HOLD_KP
         pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
-        self.rumble = TOUCH_RUMBLE + (0.8 - TOUCH_RUMBLE) * pressure  # vibration amplitude (0 to 1)
+        self.rumble = TOUCH_RUMBLE + (1.0 - TOUCH_RUMBLE) * pressure  # vibration amplitude (0 to 1)
         return SOFT_HOLD_KP + (HOLD_KP - SOFT_HOLD_KP) * pressure
 
     def trigger(self, value):
