@@ -148,12 +148,7 @@ class Axis:
 
     def set_trigger_target(self, value):
         self.trigger_value = value
-        anchors = [0, *(self.config.get("trigger_curve") or []), 1]
-        for index, (low, high) in enumerate(zip(anchors, anchors[1:])):
-            if value <= high:
-                closure = (index + (value - low) / (high - low)) / (len(anchors) - 1)
-                self.move(jaw_angle(closure, self.config))
-                break
+        self.move(jaw_angle(value, self.config))
 
     def feedback(self, now):
         mid = self.config["selected"]
@@ -231,6 +226,7 @@ class Motor:
         for calibration in self.config["grippers"].values():
             calibration.pop("jaw_points", None)
             calibration.pop("trigger_midpoint", None)
+            calibration.pop("trigger_curve", None)
         self.bus = CanBus()
         self.lock = threading.RLock()
         self.record = record
@@ -270,7 +266,7 @@ class Motor:
     def save(self):
         for mid, axis in self.axes.items():
             self.config["grippers"][str(mid)] = {
-                k: axis.config.get(k) for k in ("opened", "closed", "uid", "trigger_curve")
+                k: axis.config.get(k) for k in ("opened", "closed", "uid")
             }
         save_json(self.path, self.config)
 
@@ -363,14 +359,6 @@ class Motor:
                 position = axis.target if axis.target is not None else axis.telemetry["position"]
                 near_open = abs(position - c["opened"]) < abs(position - c["closed"])
                 axis.set_trigger_target(1.0 if near_open else 0.0)
-            elif name == "trigger-curve":
-                if self.active:
-                    raise ValueError("Turn the motor off before calibrating the trigger")
-                curve = [finite(v, 0, 1) for v in data["curve"]]
-                if len(curve) != 9 or any(a >= b for a, b in zip([0, *curve], [*curve, 1])):
-                    raise ValueError("Invalid trigger curve")
-                self.axis(SIDES[data["side"]]).config["trigger_curve"] = curve
-                self.save()
             elif name == "select":
                 if self.active:
                     raise ValueError("Turn the motor off before switching motors")

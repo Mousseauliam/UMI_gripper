@@ -75,6 +75,6 @@ Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admi
 
 Put current STL/3MF exports in `assets/print/` and STEP exports in `assets/simulation/`. These folders are placeholders: no CAD export was supplied with the source, and older V1/V2 models have not been substituted.
 
-## Trigger calibration
+## Quest trigger response
 
-Trigger travel requests jaw closure. With motors off, choose left or right trigger calibration in the Quest browser. Make three full, steady presses of about two seconds each, releasing fully between presses. The median sensor reading at each tenth of normalized press time defines that hand's curve. During control the backend interpolates directly between calibrated readings. Without a trigger curve, raw trigger travel requests the same fraction of jaw closure. The VR HUD shows the raw percentage for each hand. Both grippers share fixed motor offsets of 0.804, 1.421 and 1.870 radians from open at 25%, 50% and 75% closure. The saved end stops determine the direction and final angle. The MIT loop sends the current target directly at 200 Hz.
+Both hands use the same fixed response: 45% raw input plus 55% normalized exponential response (rate 6). The VR HUD and motor command use the same corrected trigger percentage. The resulting closure request goes through the STEP linkage curve and the saved open and closed motor angles.

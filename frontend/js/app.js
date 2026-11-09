@@ -107,7 +107,6 @@ function render(s) {
   $("motorOff").disabled = !m.active;
   $("toggle").disabled = !m.active || m.vr;
   $("setOpen").disabled = $("setClosed").disabled = m.active;
-  $("calLeft").disabled = $("calRight").disabled = m.active || m.scanning || r.recording;
   $("scan").disabled = m.active || m.scanning;
   $("scan").textContent = m.scanning ? "Detecting…" : "Detect motors";
   $("motorError").textContent = m.error;
