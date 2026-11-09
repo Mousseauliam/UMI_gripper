@@ -14,7 +14,7 @@ HOLD_KP = 1.2  # N·m/rad
 TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.6  # rad
 CONTACT_CONFIRMATION_RAD = 0.1  # rad of additional commanded closure and tracking error
-TOUCHING_TORQUE = 0.25  # N·m
+TOUCHING_TORQUE = 0.3  # N·m
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)  # rad from open at 0, 25, 50 and 75% closure
 
 
