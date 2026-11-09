@@ -347,7 +347,7 @@ else
       try {
         syncClock();
         if (session.visibilityState !== "visible") {
-          if (ready || starting) finish("VR interrupted · Motor OFF. Select Enter VR to resume.");
+          if (ready || starting) finish("VR interrupted · Holding position. Select Enter VR to resume.");
           return;
         }
         pose = xrFrame.getViewerPose(world);
@@ -358,7 +358,7 @@ else
         const right = controller("right"), left = controller("left");
         if (!right || !left) {
           const missing = !left ? "left" : "right";
-          if (ready || starting) finish(missing + " controller lost · Motor OFF");
+          if (ready || starting) finish(missing + " controller lost · Holding position");
           else info("Waiting for the " + missing + " controller");
           return;
         }
@@ -412,7 +412,7 @@ else
     }
     setInterval(() => {
       if (session && framesStarted && performance.now() - lastFrame > 1500)
-        finish("VR frames lost · Motor OFF");
+        finish("VR frames lost · Holding position");
     }, 200);
     $("enterVR").onclick = () => startSession();
     async function startSession() {

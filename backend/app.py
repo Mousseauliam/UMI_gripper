@@ -202,7 +202,7 @@ class App:
                         await asyncio.to_thread(self.motor.on, True)
                         await ws.send_json({"type": "vr_ready"})
                     elif kind == "vr_stop" and self.vr_owner is ws:
-                        await asyncio.to_thread(self.motor.stop)
+                        await asyncio.to_thread(self.motor.leave_vr)
                         self.vr_owner = None
                     elif kind == "sample" and self.vr_owner is ws:
                         received = time.monotonic_ns()
@@ -232,7 +232,7 @@ class App:
         finally:
             task.cancel()
             if self.vr_owner is ws:
-                await asyncio.to_thread(self.motor.stop)
+                await asyncio.to_thread(self.motor.leave_vr)
                 self.vr_owner = None
                 if self.recorder.active:
                     await asyncio.to_thread(

@@ -42,7 +42,7 @@ def jaw_angle(value, config):
 class Axis:
     def __init__(self, config, bus, lock, record):
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
-        self.active = self.vr = self.opening = self.released = False
+        self.active = self.vr = self.holding_vr_target = self.opening = self.released = False
         self.trigger_value = 0.0
         self.contact_trigger = None
         self.contact_candidate_sequence = None
@@ -60,7 +60,7 @@ class Axis:
                 if self.active:
                     self.bus.stop(self.config["selected"])
             finally:
-                self.active = self.vr = self.opening = False
+                self.active = self.vr = self.holding_vr_target = self.opening = False
 
     def positions(self):
         opened = finite(self.config["opened"], -12.5, 12.5)
@@ -112,7 +112,8 @@ class Axis:
         direction = math.copysign(1, self.config["closed"] - self.config["opened"])
         closing_error = direction * (self.target - self.telemetry["position"])
         closing_torque = direction * self.telemetry.get("torque", 0.0)
-        if self.vr:
+        use_trigger_control = self.vr or self.holding_vr_target
+        if use_trigger_control:
             error_threshold = 0.06  # rad, release an existing contact
             touching = (
                 closing_torque > TOUCHING_TORQUE
@@ -139,7 +140,7 @@ class Axis:
                 return KP
             self.contact_trigger = self.trigger_value
 
-        if not self.vr:
+        if not use_trigger_control:
             return HOLD_KP
         if self.contact_trigger >= 1.0:
             self.rumble = self.trigger_value  # vibration amplitude (0 to 1)
@@ -170,8 +171,6 @@ class Axis:
             raise RuntimeError(f"Motor {mid} fault: {self.bus.faults[mid]}")
         if status.get("faults"):
             raise RuntimeError(f"Motor {mid} fault mask: {status['faults']}")
-        if self.vr and now - self.seen > 1:
-            raise RuntimeError("VR signal lost: motors stopped")
         if now - self.started > 0.25 and now - status.get("seen", 0) > 0.25:
             raise RuntimeError(f"CAN feedback lost for motor {mid}")
         if now - self.started > 0.5 and status.get("mode") == 0:
@@ -283,6 +282,13 @@ class Motor:
             }
         save_json(self.path, self.config)
 
+    def leave_vr(self):
+        with self.lock:
+            for axis in self.axes.values():
+                if axis.vr:
+                    axis.vr = axis.opening = False
+                    axis.holding_vr_target = True
+
     def stop(self):
         with self.lock:
             errors = []
@@ -350,7 +356,7 @@ class Motor:
                 for side, axis in active:
                     axis.trigger(values[side])
             except Exception:
-                self.stop()
+                self.leave_vr()
                 raise
 
     def action(self, name, data):
@@ -371,6 +377,9 @@ class Motor:
                 c = axis.config
                 position = axis.target if axis.target is not None else axis.telemetry["position"]
                 near_open = abs(position - c["opened"]) < abs(position - c["closed"])
+                axis.holding_vr_target = False
+                axis.contact_trigger = axis.contact_candidate_sequence = None
+                axis.rumble = 0.0
                 axis.set_trigger_target(1.0 if near_open else 0.0)
             elif name == "select":
                 if self.active:
@@ -442,6 +451,8 @@ class Motor:
         active = [axis for axis in self.axes.values() if axis.active]
         if not active:
             return
+        if any(axis.vr and now - axis.seen > 1 for axis in active):
+            self.leave_vr()
         self.bus.drain()
         for axis in active:
             axis.feedback(now)
