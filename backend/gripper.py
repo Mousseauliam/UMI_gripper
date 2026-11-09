@@ -14,6 +14,7 @@ HOLD_KP = 1.2  # N·m/rad
 TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.6  # rad
 CONTACT_CONFIRMATION_RAD = 0.05  # rad of additional commanded closure and tracking error
+TOUCHING_TORQUE = 0.2  # N·m
 JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)  # rad from open at 0, 25, 50 and 75% closure
 
 
@@ -103,7 +104,7 @@ class Axis:
         closing_torque = direction * self.telemetry.get("torque", 0.0)
         if self.vr:
             error_threshold = 0.06  # rad
-            touching = closing_torque > 0.15 and speed < 0.45  # torque in N·m, speed in rad/s
+            touching = closing_torque > TOUCHING_TORQUE and speed < 0.45  # torque in N·m, speed in rad/s
             if self.contact_trigger is None:
                 if not touching or closing_error <= error_threshold:
                     self.contact_probe = None
