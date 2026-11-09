@@ -12,19 +12,30 @@ PERIOD = 0.005  # s (5 ms, 200 Hz)
 SOFT_HOLD_KP = 0.4  # N·m/rad
 HOLD_KP = 1.2  # N·m/rad
 TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
-HOLD_ERROR_RAD = 0.4  # rad
+HOLD_ERROR_RAD = 0.2  # rad
 TOUCHING_TORQUE = 0.3  # N·m
-JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)  # rad from open at 0, 25, 50 and 75% closure
+# Normalized motor travel from the STEP linkage, sampled at closure = (i / 32)**2.
+STEP_MOTOR_TRAVEL = (
+    0.0000000, 0.0042026, 0.0160694, 0.0338792, 0.0558120, 0.0804323,
+    0.1067531, 0.1341371, 0.1621861, 0.1906572, 0.2194082, 0.2483618,
+    0.2774836, 0.3067676, 0.3362278, 0.3658917, 0.3957982, 0.4259944,
+    0.4565361, 0.4874871, 0.5189205, 0.5509204, 0.5835847, 0.6170288,
+    0.6513916, 0.6868436, 0.7236005, 0.7619425, 0.8022490, 0.8450584,
+    0.8911852, 0.9419775, 1.0000000,
+)
 
 
 def jaw_angle(value, config):
     opened, closed = config["opened"], config["closed"]
-    stroke = abs(closed - opened)
-    offsets = [min(offset, stroke) for offset in JAW_OFFSETS] + [stroke]
-    segment = min(int(value * 4), 3)
-    progress = value * 4 - segment
-    offset = offsets[segment] + progress * (offsets[segment + 1] - offsets[segment])
-    return opened + math.copysign(offset, closed - opened)
+    if value <= 0:
+        return opened
+    if value >= 1:
+        return closed
+    index = math.sqrt(value) * (len(STEP_MOTOR_TRAVEL) - 1)
+    segment = min(int(index), len(STEP_MOTOR_TRAVEL) - 2)
+    low, high = STEP_MOTOR_TRAVEL[segment:segment + 2]
+    fraction = low + (high - low) * (index - segment)
+    return opened + (closed - opened) * fraction
 
 
 class Axis:
