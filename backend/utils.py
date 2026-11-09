@@ -7,13 +7,13 @@ from pathlib import Path
 def finite(value, low, high):
     value = float(value)
     if not math.isfinite(value) or not low <= value <= high:
-        raise ValueError(f"Valeur attendue entre {low} et {high}")
+        raise ValueError(f"Expected a value between {low} and {high}")
     return value
 
 
 def motor_id(value):
     if isinstance(value, bool) or int(value) != float(value) or not 1 <= int(value) <= 254:
-        raise ValueError("ID moteur : entier de 1 Ã  254")
+        raise ValueError("Motor ID must be an integer from 1 to 254")
     return int(value)
 
 

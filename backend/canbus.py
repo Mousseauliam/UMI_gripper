@@ -138,7 +138,7 @@ class CanBus:
         for frame in self.receive(time.monotonic() + timeout):
             typ, source, host, payload, arb = frame
             if typ == 21 and source == mid and host == self.host:
-                raise RuntimeError(f"Défaut moteur : {payload.hex()}")
+                raise RuntimeError(f"Motor fault: {payload.hex()}")
             if (
                 typ != expected
                 or source != mid
@@ -148,9 +148,9 @@ class CanBus:
             if expected == 17 and payload[:2] != data[:2]:
                 continue
             if expected == 2 and (arb >> 16) & 63:
-                raise RuntimeError(f"Défaut moteur : masque {(arb >> 16) & 63}")
+                raise RuntimeError(f"Motor fault mask: {(arb >> 16) & 63}")
             return payload
-        raise TimeoutError(f"Pas de réponse du moteur {mid} (type {kind})")
+        raise TimeoutError(f"No response from motor {mid} (type {kind})")
 
     def ping(self, mid, timeout=0.07):
         try:
@@ -162,7 +162,7 @@ class CanBus:
         payload = self.request(17, mid, struct.pack("<HHI", index, 0, 0))
         value = struct.unpack_from("<" + fmt, payload, 4)[0]
         if isinstance(value, float) and not math.isfinite(value):
-            raise RuntimeError("Télémétrie non finie")
+            raise RuntimeError("Non-finite telemetry")
         return value
 
     def write(self, mid, index, value, fmt="f", verify=True):
@@ -177,7 +177,7 @@ class CanBus:
                 actual = self.read(mid, index, fmt)
                 if math.isclose(actual, value, rel_tol=1e-4, abs_tol=1e-5):
                     return
-            raise RuntimeError(f"Paramètre {index:#x} non confirmé : attendu {value}, lu {actual}")
+            raise RuntimeError(f"Parameter {index:#x} not confirmed: expected {value}, read {actual}")
 
     def stop(self, mid):
         return self.request(4, mid, response=2)

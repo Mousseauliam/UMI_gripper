@@ -6,14 +6,15 @@ from pathlib import Path
 from .canbus import CanBus
 from .utils import finite, load_json, motor_id, save_json
 
-KP = 2.04
-KD = 0.178571
-PERIOD = 0.005
-SOFT_HOLD_KP = 0.4
-HOLD_KP = 1.2
-TOUCH_RUMBLE = 0.25
-HOLD_ERROR_RAD = 0.49
-JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)
+KP = 2.04  # N·m/rad
+KD = 0.178571  # N·m·s/rad
+PERIOD = 0.005  # s (5 ms, 200 Hz)
+SOFT_HOLD_KP = 0.4  # N·m/rad
+HOLD_KP = 1.2  # N·m/rad
+TOUCH_RUMBLE = 0.5  # vibration amplitude (0 to 1)
+HOLD_ERROR_RAD = 0.6  # rad
+CONTACT_CONFIRMATION_RAD = 0.05  # rad of additional commanded closure and tracking error
+JAW_OFFSETS = (0.0, 0.80355835, 1.42135668, 1.87021923)  # rad from open at 0, 25, 50 and 75% closure
 
 
 def jaw_angle(value, config):
@@ -53,7 +54,7 @@ class Axis:
         opened = finite(self.config["opened"], -12.5, 12.5)
         closed = finite(self.config["closed"], -12.5, 12.5)
         if abs(opened - closed) < 0.001:
-            raise ValueError("Définir deux positions distinctes")
+            raise ValueError("Set distinct open and closed positions")
         return opened, closed
 
     def on(self, vr=False):
@@ -101,8 +102,8 @@ class Axis:
         speed = abs(self.telemetry.get("velocity", math.inf))
         closing_torque = direction * self.telemetry.get("torque", 0.0)
         if self.vr:
-            error_threshold = 0.06
-            touching = closing_torque > 0.15 and speed < 0.45
+            error_threshold = 0.06  # rad
+            touching = closing_torque > 0.15 and speed < 0.45  # torque in N·m, speed in rad/s
             if self.contact_trigger is None:
                 if not touching or closing_error <= error_threshold:
                     self.contact_probe = None
@@ -110,12 +111,12 @@ class Axis:
                     self.contact_probe = (direction * self.target, closing_error)
                 if self.contact_probe is not None:
                     start, error = self.contact_probe
-                    touching = min(direction * self.target - start, closing_error - error) >= 0.04
+                    touching = min(direction * self.target - start, closing_error - error) >= CONTACT_CONFIRMATION_RAD
                     if self.trigger_value == 1.0 and closing_error > HOLD_ERROR_RAD:
-                        touching |= closing_torque > 0.4 and speed < 0.15
+                        touching |= closing_torque > 0.4 and speed < 0.15  # torque in N·m, speed in rad/s
         else:
             error_threshold = HOLD_ERROR_RAD
-            touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15
+            touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15  # torque in N·m, speed in rad/s
 
         if closing_error <= error_threshold:
             self.contact_probe = None
@@ -130,10 +131,10 @@ class Axis:
         if not self.vr:
             return HOLD_KP
         if self.contact_trigger >= 1.0:
-            self.rumble = 0.8 * self.trigger_value
+            self.rumble = 0.8 * self.trigger_value  # vibration amplitude (0 to 1)
             return HOLD_KP
         pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
-        self.rumble = TOUCH_RUMBLE + (0.8 - TOUCH_RUMBLE) * pressure
+        self.rumble = TOUCH_RUMBLE + (0.8 - TOUCH_RUMBLE) * pressure  # vibration amplitude (0 to 1)
         return SOFT_HOLD_KP + (HOLD_KP - SOFT_HOLD_KP) * pressure
 
     def trigger(self, value):
@@ -160,15 +161,15 @@ class Axis:
         mid = self.config["selected"]
         status = self.bus.status.get(mid, {})
         if self.bus.faults.get(mid):
-            raise RuntimeError(f"Défaut moteur {mid}: {self.bus.faults[mid]}")
+            raise RuntimeError(f"Motor {mid} fault: {self.bus.faults[mid]}")
         if status.get("faults"):
-            raise RuntimeError(f"Défaut moteur {mid}: masque {status['faults']}")
+            raise RuntimeError(f"Motor {mid} fault mask: {status['faults']}")
         if self.vr and now - self.seen > 1:
-            raise RuntimeError("Signal VR perdu : moteurs arrêtés")
+            raise RuntimeError("VR signal lost: motors stopped")
         if now - self.started > 0.25 and now - status.get("seen", 0) > 0.25:
-            raise RuntimeError(f"Retour CAN perdu : moteur {mid}")
+            raise RuntimeError(f"CAN feedback lost for motor {mid}")
         if now - self.started > 0.5 and status.get("mode") == 0:
-            raise RuntimeError(f"Moteur {mid} désactivé malgré la commande MIT")
+            raise RuntimeError(f"Motor {mid} disabled despite MIT command")
         if status.get("sequence", 0) == self.feedback_sequence:
             return
         self.feedback_sequence = status["sequence"]
@@ -305,14 +306,14 @@ class Motor:
                     if uid:
                         break
                 if not uid:
-                    raise ValueError(f"Gripper {side} ({mid}) absent : vérifier alimentation/CAN")
+                    raise ValueError(f"Gripper {side} ({mid}) missing: check power and CAN")
                 self.motors[mid] = uid
                 axis = self.axis(mid)
                 try:
                     axis.positions()
                 except (TypeError, ValueError):
                     raise ValueError(
-                        f"Calibrer le gripper {side} ({mid}) : définir ouvert et fermé"
+                        f"Calibrate the {side} gripper ({mid}): set open and closed positions"
                     )
                 found.append(axis)
             try:
@@ -336,7 +337,9 @@ class Motor:
             ]
             try:
                 for side, axis in active:
-                    finite(values.get(side), 0, 1)
+                    if values.get(side) is None:
+                        raise ValueError(f"Missing trigger signal ({side})")
+                    finite(values[side], 0, 1)
                 for side, axis in active:
                     axis.trigger(values[side])
             except Exception:
@@ -347,7 +350,7 @@ class Motor:
         with self.lock:
             self.error = ""
             if self.scanning and name != "off":
-                raise ValueError("Scan en cours")
+                raise ValueError("Scan in progress")
             axis = self.axis(self.config["selected"])
             if name == "on":
                 self.on()
@@ -357,44 +360,44 @@ class Motor:
                 self.on(vr=True)
             elif name == "toggle":
                 if self.vr:
-                    raise ValueError("Quitter le mode VR")
+                    raise ValueError("Exit VR mode")
                 c = axis.config
                 position = axis.target if axis.target is not None else axis.telemetry["position"]
                 near_open = abs(position - c["opened"]) < abs(position - c["closed"])
                 axis.set_trigger_target(1.0 if near_open else 0.0)
             elif name == "trigger-curve":
                 if self.active:
-                    raise ValueError("Passer Motor OFF avant de calibrer la gâchette")
+                    raise ValueError("Turn the motor off before calibrating the trigger")
                 curve = [finite(v, 0, 1) for v in data["curve"]]
                 if len(curve) != 9 or any(a >= b for a, b in zip([0, *curve], [*curve, 1])):
-                    raise ValueError("Courbe de gâchette invalide")
+                    raise ValueError("Invalid trigger curve")
                 self.axis(SIDES[data["side"]]).config["trigger_curve"] = curve
                 self.save()
             elif name == "select":
                 if self.active:
-                    raise ValueError("Passer Motor OFF avant de changer de moteur")
+                    raise ValueError("Turn the motor off before switching motors")
                 mid = motor_id(data["id"])
                 uid = self.bus.ping(mid)
                 if not uid:
-                    raise ValueError("Moteur absent")
+                    raise ValueError("Motor not detected")
                 self.motors[mid] = uid
                 self.axis(mid).config["uid"] = uid
                 self.config["selected"] = mid
                 self.save()
             elif name in ("opened", "closed"):
                 if self.active:
-                    raise ValueError("Passer Motor OFF avant de définir les angles")
+                    raise ValueError("Turn the motor off before setting the angles")
                 axis.config[name] = finite(
                     self.bus.read(axis.config["selected"], 0x7019), -12.5, 12.5
                 )
                 self.save()
             else:
-                raise ValueError("Commande inconnue")
+                raise ValueError("Unknown command")
 
     def scan(self):
         with self.lock:
             if self.active or self.scanning:
-                raise ValueError("Passer Motor OFF avant le scan")
+                raise ValueError("Turn the motor off before scanning")
             self.scanning = True
             self.motors = {}
         try:

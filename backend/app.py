@@ -82,7 +82,7 @@ class App:
                 action = path.split("/")[1]
                 if action == "scan":
                     if self.motor.active or self.motor.scanning:
-                        raise ValueError("Motor OFF requis")
+                        raise ValueError("Turn the motor off first")
                     asyncio.create_task(asyncio.to_thread(self.motor.scan))
                 else:
                     await asyncio.to_thread(self.motor.action, action, d)
@@ -98,12 +98,12 @@ class App:
                 await asyncio.to_thread(self.recorder.discard, d["id"])
             elif path == "convert":
                 if self.recorder.active:
-                    raise ValueError("Terminer l’enregistrement avant la conversion")
+                    raise ValueError("Stop recording before conversion")
                 self.converter.start(d)
             elif path == "tasks/add":
                 task = " ".join(d["task"].split())[:300]
                 if not task:
-                    raise ValueError("Task vide")
+                    raise ValueError("Task cannot be empty")
                 self.tasks["tasks"].append(
                     dict(task=task, category=d["category"], group=d.get("group", ""))
                 )
@@ -119,7 +119,7 @@ class App:
                 self.setup["setup"] = {k: d.get(k, []) for k in ("tools", "objects", "quality")}
                 self.persist()
             else:
-                raise ValueError("Commande inconnue")
+                raise ValueError("Unknown command")
             return web.json_response(self.state())
         except Exception as exc:
             return web.json_response({"error": str(exc)}, status=400)
@@ -197,7 +197,7 @@ class App:
                         offset = float(d["offset"])
                     elif kind == "vr_start":
                         if self.vr_owner is not None and self.vr_owner is not ws:
-                            raise ValueError("Autre session VR active")
+                            raise ValueError("Another VR session is active")
                         self.vr_owner = ws
                         await asyncio.to_thread(self.motor.on, True)
                         await ws.send_json({"type": "vr_ready"})
@@ -227,7 +227,7 @@ class App:
                             )
                     await ws.send_json({"type": "ack", "seq": d.get("seq")})
                 except Exception as exc:
-                    print("VR command error:", str(exc), flush=True)
+                    print("VR command error:", d.get("type"), str(exc), flush=True)
                     await ws.send_json({"type": "error", "error": str(exc)})
         finally:
             task.cancel()
@@ -251,18 +251,18 @@ class App:
                 continue
             try:
                 if len(msg.data) < 17:
-                    raise ValueError("Frame invalide")
+                    raise ValueError("Invalid frame")
                 milliseconds, sequence = struct.unpack_from("<dQ", msg.data)
                 if not math.isfinite(milliseconds):
-                    raise ValueError("Horodatage invalide")
+                    raise ValueError("Invalid timestamp")
                 stamp = round(milliseconds * 1e6)
                 received = time.monotonic_ns()
                 if not -100_000_000 <= received - stamp <= 2_000_000_000:
-                    raise ValueError("Horloge caméra non synchronisée ou frame trop ancienne")
+                    raise ValueError("Camera clock out of sync or frame too old")
                 image = msg.data[16:]
                 with Image.open(io.BytesIO(image)) as im:
                     if im.format != "JPEG" or max(im.size) > 1920:
-                        raise ValueError("JPEG invalide")
+                        raise ValueError("Invalid JPEG")
                     im.verify()
                 await asyncio.to_thread(self.cameras.items["quest"].publish, image, stamp)
                 self.recorder.json(

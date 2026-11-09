@@ -27,13 +27,13 @@
               >Tension actuelle
               <div id="voltage" class="metric">—</div></label
             ><label
-              >Température moteur
+              >Motor temperature
               <div id="temperature" class="metric">—</div></label
             ><label
-              >Couple moteur
+              >Motor torque
               <div id="torque" class="metric">—</div></label
             ><label
-              >Kp instantané
+              >Current Kp
               <div id="kp" class="metric">—</div></label
             >
           </div>
@@ -50,14 +50,14 @@
             ><button id="setClosed">Set current as closed</button>
           </div>
           <div class="row">
-            <button id="calLeft">Configurer gâchette gauche</button>
-            <button id="calRight">Configurer gâchette droite</button>
+            <button id="calLeft">Calibrate left trigger</button>
+            <button id="calRight">Calibrate right trigger</button>
           </div>
           <dialog id="triggerDialog">
             <h3 id="triggerTitle"></h3>
-            <p>Presse la gâchette jusqu’au bout à vitesse constante en environ 2 secondes, puis relâche-la complètement. Répète trois fois.</p>
-            <button id="calStart">Commencer dans le casque</button>
-            <button id="calCancel">Annuler</button>
+            <p>Squeeze the trigger steadily over about 2 seconds until fully pressed, then release it completely. Repeat three times.</p>
+            <button id="calStart">Start in headset</button>
+            <button id="calCancel">Cancel</button>
           </dialog>
           <p id="angles" class="hint"></p>
           <p id="motorError" class="err"></p>

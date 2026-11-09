@@ -50,7 +50,7 @@ class TriggerCalibration {
     this.strokes = [];
     this.samples = [];
     this.armed = false;
-    this.hint = "Relâche complètement la gâchette";
+    this.hint = "Fully release the trigger";
   }
 
   update(time, value) {
@@ -60,14 +60,14 @@ class TriggerCalibration {
     if (value == null || (last && time - last.time > 150)) {
       this.samples = [];
       this.armed = false;
-      this.hint = "Reprends la manette et relâche la gâchette";
+      this.hint = "Pick up the controller and release the trigger";
       return;
     }
     if (value <= 0.01) {
       this.armed = true;
       this.samples = [];
       this.restTime = time;
-      this.hint = "Presse lentement et régulièrement jusqu’au bout";
+      this.hint = "Squeeze slowly and steadily all the way";
       if (this.strokes.length === 3) {
         this.saving = true;
         return this.strokes[0].map((_, i) =>
@@ -82,7 +82,7 @@ class TriggerCalibration {
     if (duration > 5000 || (last && value < samples[0].peak - 0.05)) {
       this.armed = false;
       this.samples = [];
-      this.hint = "Essai interrompu · relâche et recommence";
+      this.hint = "Stroke interrupted · release and try again";
       return;
     }
     samples[0].peak = Math.max(samples[0].peak || 0, value);
@@ -90,7 +90,7 @@ class TriggerCalibration {
     this.armed = false;
     this.samples = [];
     if (duration < 700 || samples.length < 15) {
-      this.hint = "Trop rapide · relâche et recommence";
+      this.hint = "Too fast · release and try again";
       return;
     }
     const curve = [];
@@ -101,11 +101,11 @@ class TriggerCalibration {
       curve.push(a.value + (b.value - a.value) * (t - a.time) / (b.time - a.time));
     }
     if (curve.some((v, i) => v <= (curve[i - 1] || 0) || v >= 1)) {
-      this.hint = "Mouvement irrégulier · relâche et recommence";
+      this.hint = "Uneven movement · release and try again";
       return;
     }
     this.strokes.push(curve);
-    this.hint = "Pression validée · relâche complètement";
+    this.hint = "Stroke accepted · release fully";
   }
 }
 if (typeof module !== "undefined") module.exports = RecordButtons;
@@ -246,7 +246,7 @@ else
       hudContext.textAlign = "center";
       hudContext.fillStyle = r?.recording ? "#ff6258" : "#ffffff";
       hudContext.fillText(
-        calibration ? (calibration.side === "left" ? "Gauche" : "Droite") + " · " + calibration.strokes.length + "/3" : r?.recording
+        calibration ? (calibration.side === "left" ? "Left" : "Right") + " · " + calibration.strokes.length + "/3" : r?.recording
           ? "● REC " + r.duration_s.toFixed(1) + " s"
           : r?.last.outcome
             ? "Saved · " + r.last.outcome
@@ -270,7 +270,7 @@ else
         if (triggerLocks.get(side)?.locked) return (100 * triggerLocks.get(side).value).toFixed(1) + " % 🔒";
         return value == null ? "—" : (100 * value).toFixed(1) + " %";
       };
-      hudContext.fillText("Gâchette G : " + triggerText("left") + "     D : " + triggerText("right"), 512, 178);
+      hudContext.fillText("Left trigger: " + triggerText("left") + "     Right: " + triggerText("right"), 512, 178);
       gl.uniformMatrix4fv(worldFromHead, false, pose.transform.matrix);
       for (const view of pose.views) {
         const vp = layer.getViewport(view);
@@ -399,7 +399,7 @@ else
       try {
         syncClock();
         if (session.visibilityState !== "visible") {
-          if (ready || starting) finish("VR interrompue · Motor OFF. Relancer Enter VR pour reprendre.");
+          if (ready || starting) finish("VR interrupted · Motor OFF. Select Enter VR to resume.");
           return;
         }
         pose = xrFrame.getViewerPose(world);
@@ -409,19 +409,21 @@ else
           const curve = calibration.update(time, source?.gamepad.buttons[0]?.value);
           if (curve) {
             const current = calibration;
-            current.hint = "Enregistrement…";
+            current.hint = "Saving…";
             api("motor/trigger-curve", {side: current.side, curve})
-              .then(() => { if (calibration === current) finish("Calibration enregistrée"); })
+              .then(() => { if (calibration === current) finish("Calibration saved"); })
               .catch(e => { if (calibration === current) finish(e.message); });
           }
           return;
         }
-        const right = [...session.inputSources].find(
-          (s) =>
-            s.handedness === "right" && s.gamepad?.mapping === "xr-standard",
-        );
-        if (!right) {
-          if (ready) finish("Right controller lost · Motor OFF");
+        const controller = side => [...session.inputSources].find(s =>
+          s.handedness === side && s.gamepad?.mapping === "xr-standard" &&
+          Number.isFinite(s.gamepad.buttons[0]?.value));
+        const right = controller("right"), left = controller("left");
+        if (!right || !left) {
+          const missing = !left ? "left" : "right";
+          if (ready || starting) finish(missing + " controller lost · Motor OFF");
+          else info("Waiting for the " + missing + " controller");
           return;
         }
         if (!ready && !starting) {
@@ -431,14 +433,9 @@ else
           return;
         }
         if (!ready) return;
-        const left = [...session.inputSources].find(
-          (s) =>
-            s.handedness === "left" && s.gamepad?.mapping === "xr-standard",
-        );
         buttons(right.gamepad, left?.gamepad, time);
         const triggers = { right: triggerCommand(right, !pending) };
-        if (left) triggers.left = triggerCommand(left, !pending);
-        else triggerLocks.delete('left');
+        triggers.left = triggerCommand(left, !pending);
         if (pending) return;
         const hands = {};
         for (const source of session.inputSources) {
@@ -533,7 +530,7 @@ else
                 ? Array.from(event.transform.matrix)
                 : null,
             });
-          info("Repère du casque recalé · VR active");
+          info("Headset tracking origin reset · VR active");
         });
         session.addEventListener("end", () => {
           if (session) finish();

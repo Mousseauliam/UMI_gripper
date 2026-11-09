@@ -21,7 +21,7 @@
         d.error ||
         "Quest : " +
           d.sequence +
-          " images envoyées · réseau " +
+          " frames sent · network " +
           d.transport_ms.toFixed(0) +
           " ms";
     };
@@ -36,17 +36,17 @@
   }
   $("questCamera").onclick = async () => {
     try {
-      $("questStatus").textContent = "Demande d’accès à la caméra extérieure…";
+      $("questStatus").textContent = "Requesting access to the external camera…";
       if (capture) {
         capture.getTracks().forEach((t) => t.stop());
         capture = null;
         cameraWS?.close();
         $("questCamera").textContent = "Enable Quest camera";
-        $("questStatus").textContent = "Caméra arrêtée";
+        $("questStatus").textContent = "Camera stopped";
         return;
       }
       if (!isSecureContext || !navigator.mediaDevices?.getUserMedia)
-        throw Error("Ouvrir cette page en HTTPS dans le navigateur du Quest");
+        throw Error("Open this page over HTTPS in Quest Browser");
       try {
         capture = await navigator.mediaDevices.getUserMedia({
           audio: false,
@@ -55,7 +55,7 @@
       } catch (firstError) {
         if (firstError.name !== "OverconstrainedError") throw firstError;
         $("questStatus").textContent =
-          "Autorise la caméra dans le Quest. Vérification de la caméra extérieure ensuite…";
+          "Allow camera access on the Quest to check for an external camera…";
         const permission = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: true,
@@ -87,12 +87,12 @@
       try {
         cameras = (await navigator.mediaDevices.enumerateDevices())
           .filter((d) => d.kind === "videoinput")
-          .map((d) => d.label || "caméra non identifiée");
+          .map((d) => d.label || "unidentified camera");
       } catch (_) {}
       const reason =
         e.name === "OverconstrainedError"
-          ? "Le navigateur ne fournit pas de caméra extérieure compatible."
-          : "Accès caméra refusé ou indisponible.";
+          ? "The browser did not provide a compatible external camera."
+          : "Camera access denied or unavailable.";
       $("questStatus").textContent =
         reason +
         " " +
@@ -100,8 +100,8 @@
         (e.constraint ? " [" + e.constraint + "]" : "") +
         " " +
         (e.message || "") +
-        " · Caméras exposées : " +
-        (cameras.join(", ") || "aucune");
+        " · Available cameras: " +
+        (cameras.join(", ") || "none");
       if (ws?.readyState === 1)
         send({ type: "diagnostic", message: $("questStatus").textContent });
     }

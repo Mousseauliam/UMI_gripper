@@ -154,7 +154,7 @@ function render(s) {
   }
   if (!r.recording && r.last.data_complete === "false")
     message(
-      "Épisode sauvegardé, données incomplètes : " +
+      "Episode saved with incomplete data: " +
         [
           ...JSON.parse(r.last.missing_streams || "[]"),
           ...JSON.parse(r.last.discontinuous_streams || "[]"),

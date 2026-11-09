@@ -73,14 +73,14 @@ class Encoder:
                 sequence += 1
                 packets = self.codec.encode(frame)
                 if len(packets) != 1:
-                    raise RuntimeError("Encodeur non immédiat : une frame doit produire un paquet")
+                    raise RuntimeError("Encoder delay: expected one packet per frame")
                 packet = packets[0]
                 data = bytes(packet)
                 types = [m.group(1)[0] & 31 for m in re.finditer(b"\x00\x00\x01(.)", data, re.S)]
                 flags = int(5 in types) | (2 if 7 in types and 8 in types else 0)
                 encoded_stamp = round(packet.pts * packet.time_base * 1_000_000_000)
                 if encoded_stamp != stamp:
-                    raise RuntimeError("Horodatage encodeur différent de la frame")
+                    raise RuntimeError("Encoder timestamp differs from frame timestamp")
                 self.recorder.video(
                     TOPICS[self.camera.name],
                     sequence,
@@ -112,7 +112,7 @@ class Camera:
         self.updated = 0
         self.width = self.height = 0
         self.encoder = None
-        self.error = "Caméra absente"
+        self.error = "Camera not detected"
         self.dropped = 0
         self.encoded = 0
         self.encode_ms = 0
@@ -177,7 +177,7 @@ class Cameras:
                     frame, buffer = buffer[start : end + 2], buffer[end + 2 :]
                     callback(frame)
                 if len(buffer) > 8_000_000:
-                    raise RuntimeError("Image invalide")
+                    raise RuntimeError("Invalid image")
         finally:
             if p.poll() is None:
                 p.terminate()

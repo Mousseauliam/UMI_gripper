@@ -144,7 +144,7 @@ class Recorder:
                     stat["last_ns"] = stamp
                     stat["count"] += 1
             except queue.Full:
-                self.error = "Enregistrement trop lent : données perdues"
+                self.error = "Recording too slow: data lost"
 
     def json(self, topic, data, stamp=None):
         self.put(topic, json.dumps(data, allow_nan=False, separators=(",", ":")).encode(), stamp)
@@ -222,7 +222,7 @@ class Recorder:
             if not self.active:
                 return self.state()
             if outcome not in ("success", "fail", "not judged", "discard"):
-                raise ValueError("Résultat invalide")
+                raise ValueError("Invalid outcome")
             end = time.monotonic_ns()
             self.put("/origin/episode", struct.pack("<QBI", end, 0, 1), end)
             self.active = False
@@ -287,9 +287,9 @@ class Recorder:
 
     def discard(self, episode):
         if Path(episode).name != episode:
-            raise ValueError("Épisode invalide")
+            raise ValueError("Invalid episode")
         if self.active and episode == self.episode:
-            raise ValueError("Arrêter l’enregistrement")
+            raise ValueError("Stop recording first")
         trash = self.root / "trash"
         trash.mkdir(exist_ok=True)
         for ext in (".mcap", ".json"):

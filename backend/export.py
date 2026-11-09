@@ -42,14 +42,14 @@ class Converter:
 
     def start(self, options):
         if self.job["running"]:
-            raise ValueError("Conversion déjà en cours")
+            raise ValueError("Conversion already in progress")
         repo = options.get("repo", "")
         if not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", repo):
             raise ValueError("Dataset: owner/name")
         if options.get("frame") != "raw":
-            raise ValueError("UMI utilise les angles moteur bruts ; sélectionner raw motor angles")
+            raise ValueError("UMI uses raw motor angles. Select raw motor angles")
         if options.get("format") not in ("lerobot_v3", "gr00t_v2"):
-            raise ValueError("Format inconnu")
+            raise ValueError("Unknown format")
         selected = [
             e
             for e in self.recorder.episodes()
@@ -60,9 +60,9 @@ class Converter:
         ]
         target = self.root / repo
         if target.exists():
-            raise ValueError("Choisir un nouveau nom de dataset ; le dataset existant est conservé")
+            raise ValueError("Choose a new dataset name. A dataset with this name already exists")
         if not selected:
-            raise ValueError("Aucun épisode correspondant")
+            raise ValueError("No matching episodes")
         self.job = {"running": True, "repo": repo, "done": 0, "total": len(selected), "error": ""}
         threading.Thread(target=self.run, args=(options, selected, target), daemon=True).start()
 
@@ -126,7 +126,7 @@ class Converter:
                                 "<QQII4sIII", msg.data
                             )
                             if fourcc != b"H264":
-                                raise ValueError("Vidéo H264 attendue")
+                                raise ValueError("Expected H.264 video")
                             name = channel.topic.removeprefix("/cam/").replace("/", "_")
                             if name not in videos:
                                 if flags & 3 != 3:
@@ -145,14 +145,14 @@ class Converter:
                     if len(v["times"]) < 2 or max(np.diff(v["times"])) > 250_000_000:
                         raise ValueError(
                             episode["id"]
-                            + ": vidéo "
+                            + ": video "
                             + name
-                            + " discontinue ; conversion refusée pour ne pas répéter artificiellement une image pendant une coupure"
+                            + " has a gap. Conversion stopped to avoid duplicating frames across the gap"
                         )
                 joints = [side for side in ("left", "right") if points[side]]
                 if not joints or any(not commands[side] for side in joints):
                     raise ValueError(
-                        episode["id"] + ": commande manquante pour un gripper enregistré"
+                        episode["id"] + ": missing command for a recorded gripper"
                     )
                 if joint_set is None:
                     joint_set = joints
@@ -163,13 +163,13 @@ class Converter:
                             "names": [side + "_gripper." + field + "_rad" for side in joints],
                         }
                 elif joints != joint_set:
-                    raise ValueError("Les épisodes doivent contenir les mêmes grippers")
+                    raise ValueError("Episodes must contain the same grippers")
                 if not videos:
-                    raise ValueError("Aucune vidéo disponible")
+                    raise ValueError("No video available")
                 if camera_set is None:
                     camera_set = set(videos)
                 elif set(videos) != camera_set:
-                    raise ValueError("Les épisodes doivent contenir les mêmes caméras")
+                    raise ValueError("Episodes must contain the same cameras")
                 start = max(
                     *(points[side][0][0] for side in joints),
                     *(commands[side][0][0] for side in joints),
@@ -182,12 +182,12 @@ class Converter:
                     *([poses[-1][0]] if poses else []),
                 )
                 if end <= start:
-                    raise ValueError("Pas de durée commune entre les flux")
+                    raise ValueError("Streams have no overlapping time interval")
                 step = 1_000_000_000 // fps
                 n = (end - start) // step
                 times = start + np.arange(n, dtype=np.int64) * step
                 if n < 2:
-                    raise ValueError("Épisode trop court")
+                    raise ValueError("Episode too short")
                 position = np.column_stack(
                     [
                         np.interp(times, [p[0] for p in points[side]], [p[1] for p in points[side]])
@@ -257,7 +257,7 @@ class Converter:
                     )
                     images = sorted(decode.glob("*.jpg"))
                     if len(images) != len(v["times"]):
-                        raise ValueError("Nombre de frames décodées différent du MCAP")
+                        raise ValueError("Decoded frame count differs from MCAP frame count")
                     selected = self.nearest(v["times"], times)
                     sync["cameras"][name] = {
                         "source_frame_index": selected,
@@ -567,7 +567,7 @@ class Converter:
             abs(t - i / fps) > 1e-5 for i, t in enumerate(stamps)
         ):
             raise RuntimeError(
-                "Export vidéo non aligné : nombre de frames ou timestamps incorrects"
+                "Video export misaligned: incorrect frame count or timestamps"
             )
 
     @staticmethod
