@@ -11,7 +11,7 @@ KD = 0.178571  # N·m·s/rad
 PERIOD = 0.005  # s (5 ms, 200 Hz)
 MAX_HOLD_TORQUE = 1.50  # N·m at full squeeze
 TOUCH_RUMBLE = 0.10  # vibration amplitude (0 to 1)
-HOLD_ERROR_RAD = 0.14  # rad
+HOLD_ERROR_MM = 2.0  # mm of closing error at one pad tip before the gripper is considered to be holding an object
 TOUCHING_TORQUE = 0.15  # N·m, contact threshold and initial hold torque
 CONTACT_MAX_SPEED = 0.20  # rad/s, measured motor speed
 # Normalized motor travel from the STEP linkage, sampled at closure = (i / 32)**2.
@@ -23,6 +23,23 @@ STEP_MOTOR_TRAVEL = (
     0.6513916, 0.6868436, 0.7236005, 0.7619425, 0.8022490, 0.8450584,
     0.8911852, 0.9419775, 1.0000000,
 )
+
+# Single pad tip travel along the closing axis (mm), at equal motor angle intervals.
+PAD_TIP_TRAVEL_MM = (
+    0.000, 0.590, 1.311, 2.168, 3.165, 4.304, 5.586, 7.012, 8.581,
+    10.292, 12.141, 14.125, 16.238, 18.475, 20.829, 23.295, 25.862,
+    28.525, 31.272, 34.095, 36.983, 39.926, 42.910, 45.925, 48.955,
+    51.987, 55.004, 57.989, 60.924, 63.787, 66.557, 69.209, 71.717,
+)
+
+
+def pad_tip_mm(angle, config):
+    opened, closed = config["opened"], config["closed"]
+    travel = (angle - opened) / (closed - opened)
+    index = min(1.0, max(0.0, travel)) * (len(PAD_TIP_TRAVEL_MM) - 1)
+    segment = min(int(index), len(PAD_TIP_TRAVEL_MM) - 2)
+    low, high = PAD_TIP_TRAVEL_MM[segment:segment + 2]
+    return low + (high - low) * (index - segment)
 
 
 def jaw_angle(value, config):
@@ -111,7 +128,8 @@ class Axis:
         position = self.telemetry["position"]
         direction = math.copysign(1, self.config["closed"] - self.config["opened"])
         closing_error = direction * (self.target - position)
-        if closing_error <= 0.06:  # rad, release an existing contact
+        pad_error_mm = pad_tip_mm(self.target, self.config) - pad_tip_mm(position, self.config)
+        if pad_error_mm <= 0.4 * HOLD_ERROR_MM:  # hysteresis for contact release
             self.contact_trigger = self.contact_candidate_sequence = None
             self.rumble = 0.0
             return self.target
@@ -119,7 +137,7 @@ class Axis:
         if self.contact_trigger is None:
             touching = (
                 direction * self.telemetry.get("torque", 0.0) > TOUCHING_TORQUE
-                and closing_error >= HOLD_ERROR_RAD
+                and pad_error_mm >= HOLD_ERROR_MM
                 and abs(self.telemetry.get("velocity", math.inf)) <= CONTACT_MAX_SPEED
             )
             if not touching:
