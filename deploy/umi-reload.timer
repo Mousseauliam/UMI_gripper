@@ -1,0 +1,8 @@
+[Unit]
+Description=Check for a new UMI release
+[Timer]
+OnBootSec=15s
+OnUnitInactiveSec=10s
+AccuracySec=1s
+[Install]
+WantedBy=timers.target

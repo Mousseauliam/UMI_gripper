@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+from pathlib import Path
+import subprocess
+revision = subprocess.check_output(["runuser", "-u", "admin", "--", "git", "-C", "/home/admin/umi-v3", "rev-parse", "HEAD"], text=True).strip()
+marker = Path("/run/umi-release/frontend/revision.txt")
+if marker.exists() and marker.read_text().strip() == revision:
+    raise SystemExit
+subprocess.run(["systemctl", "restart", "umi-app"], check=True)

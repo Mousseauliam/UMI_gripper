@@ -66,7 +66,7 @@ systemctl status umi-git-sync
 journalctl -u umi-git-sync -f
 ```
 
-Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admin/.ssh/umi_git_deploy`, stored only on the Pi. The Git service downloads commits. umi-app.path starts the app on the first deployment. umi-app.service runs it on subsequent boots. After later pushes, restart the app between sessions with sudo systemctl restart umi-app. The app uses /home/admin/umi-env and stores calibrations and episodes in /home/admin/umi-data. Re-run the installer after changing the updater. Until the repository has its first commit on `main`, the service waits and checks again every 10 seconds.
+Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admin/.ssh/umi_git_deploy`, stored only on the Pi. With Ethernet connected, Git checks main every 10 seconds. A separate timer checks the downloaded revision every 10 seconds and restarts umi-app whenever it changes, including during VR or recording. Open pages check the served revision every 5 seconds and reload automatically. The app uses /home/admin/umi-env and stores calibrations and episodes in /home/admin/umi-data. Re-run the installer after changing the updater. Until the repository has its first commit on `main`, the service waits and checks again every 10 seconds.
 
 ## CAD
 

@@ -1,0 +1,7 @@
+[Unit]
+Description=Activate the latest UMI revision
+ConditionPathExists=/home/admin/umi-v3/.git/HEAD
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/umi-reload

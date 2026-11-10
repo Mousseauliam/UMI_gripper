@@ -5,7 +5,10 @@ ConditionPathExists=/home/admin/umi-v3/deploy/umi-app.service
 
 [Service]
 User=admin
-WorkingDirectory=/home/admin/umi-v3
+RuntimeDirectory=umi-release
+WorkingDirectory=/run/umi-release
+ExecStartPre=/usr/local/lib/umi-release
+TimeoutStopSec=15s
 Environment=UMI_DATA_DIR=/home/admin/umi-data
 ExecStart=/home/admin/umi-env/bin/python -m backend.main
 KillSignal=SIGINT

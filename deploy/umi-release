@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+repo=/home/admin/umi-v3
+runtime=/run/umi-release
+revision=$(git -C "$repo" rev-parse HEAD)
+git -C "$repo" archive "$revision" backend config frontend | tar -x -C "$runtime"
+printf '%s\n' "$revision" > "$runtime/frontend/revision.txt"
+cat >> "$runtime/frontend/index.html" <<EOF
+<script>
+setInterval(async () => {
+  try {
+    const r = await fetch('/static/revision.txt', {cache: 'no-store'});
+    if (r.ok && (await r.text()).trim() !== '$revision') location.reload();
+  } catch {}
+}, 5000);
+</script>
+EOF
