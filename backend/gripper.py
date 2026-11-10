@@ -9,11 +9,10 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04  # N·m/rad
 KD = 0.178571  # N·m·s/rad
 PERIOD = 0.005  # s (5 ms, 200 Hz)
-MIN_HOLD_TORQUE = 0.30  # N·m at first contact
-MAX_HOLD_TORQUE = 1.50  # N·m at full squeeze
+MAX_HOLD_TORQUE = 1.10  # N·m at full squeeze
 TOUCH_RUMBLE = 0.10  # vibration amplitude (0 to 1)
-HOLD_ERROR_RAD = 0.10  # rad
-TOUCHING_TORQUE = 0.18  # N·m
+HOLD_ERROR_RAD = 0.15  # rad
+TOUCHING_TORQUE = 0.22  # N·m, contact threshold and initial hold torque
 CONTACT_MAX_SPEED = 0.20  # rad/s, measured motor speed
 # Normalized motor travel from the STEP linkage, sampled at closure = (i / 32)**2.
 STEP_MOTOR_TRAVEL = (
@@ -137,7 +136,7 @@ class Axis:
         else:
             pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
         self.rumble = TOUCH_RUMBLE + (1.0 - TOUCH_RUMBLE) * pressure
-        hold_torque = MIN_HOLD_TORQUE + pressure * (MAX_HOLD_TORQUE - MIN_HOLD_TORQUE)
+        hold_torque = TOUCHING_TORQUE + pressure * (MAX_HOLD_TORQUE - TOUCHING_TORQUE)
         lead = min(hold_torque / KP, closing_error)
         return position + direction * lead
 
