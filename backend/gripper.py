@@ -9,8 +9,8 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04  # N·m/rad
 KD = 0.178571  # N·m·s/rad
 PERIOD = 0.005  # s (5 ms, 200 Hz)
-SOFT_HOLD_KP = 0.4  # N·m/rad
-HOLD_KP = 1.1  # N·m/rad
+MIN_HOLD_TORQUE = 0.30  # N·m at first contact
+MAX_HOLD_TORQUE = 1.50  # N·m at full squeeze
 TOUCH_RUMBLE = 0.10  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.10  # rad
 TOUCHING_TORQUE = 0.12  # N·m
@@ -42,13 +42,13 @@ def jaw_angle(value, config):
 class Axis:
     def __init__(self, config, bus, lock, record):
         self.config, self.bus, self.lock, self.record = config, bus, lock, record
-        self.active = self.vr = self.holding_vr_target = self.opening = self.released = False
+        self.active = self.vr = self.opening = self.released = False
         self.trigger_value = 0.0
         self.contact_trigger = None
         self.contact_candidate_sequence = None
         self.rumble = 0.0
         self.target = None
-        self.kp = KP
+        self.motor_target = None
         self.telemetry = {}
         self.seen = self.started = 0
         self.voltage_at = 0
@@ -60,7 +60,7 @@ class Axis:
                 if self.active:
                     self.bus.stop(self.config["selected"])
             finally:
-                self.active = self.vr = self.holding_vr_target = self.opening = False
+                self.active = self.vr = self.opening = False
 
     def positions(self):
         opened = finite(self.config["opened"], -12.5, 12.5)
@@ -81,7 +81,7 @@ class Axis:
             voltage = self.bus.read(mid, 0x701C)
             self.bus.write(mid, 0x7005, 0, "B")
             self.bus.write(mid, 0x7028, 20000, "I")
-            self.kp = KP
+            self.motor_target = position
             self.contact_trigger = None
             self.contact_candidate_sequence = None
             self.trigger_value = self.rumble = 0.0
@@ -108,46 +108,38 @@ class Axis:
         c = self.config
         self.target = finite(position, min(c["opened"], c["closed"]), max(c["opened"], c["closed"]))
 
-    def command_kp(self):
+    def command_position(self):
+        position = self.telemetry["position"]
         direction = math.copysign(1, self.config["closed"] - self.config["opened"])
-        closing_error = direction * (self.target - self.telemetry["position"])
-        closing_torque = direction * self.telemetry.get("torque", 0.0)
-        use_trigger_control = self.vr or self.holding_vr_target
-        if use_trigger_control:
-            error_threshold = 0.06  # rad, release an existing contact
+        closing_error = direction * (self.target - position)
+        if closing_error <= 0.06:  # rad, release an existing contact
+            self.contact_trigger = self.contact_candidate_sequence = None
+            self.rumble = 0.0
+            return self.target
+
+        if self.contact_trigger is None:
             touching = (
-                closing_torque > TOUCHING_TORQUE
+                direction * self.telemetry.get("torque", 0.0) > TOUCHING_TORQUE
                 and closing_error >= HOLD_ERROR_RAD
                 and abs(self.telemetry.get("velocity", math.inf)) <= CONTACT_MAX_SPEED
             )
             if not touching:
                 self.contact_candidate_sequence = None
-            elif self.contact_candidate_sequence is None:
+                return self.target
+            if self.contact_candidate_sequence is None:
                 self.contact_candidate_sequence = self.feedback_sequence
-            touching = touching and self.feedback_sequence != self.contact_candidate_sequence
-        else:
-            speed = abs(self.telemetry.get("velocity", math.inf))
-            error_threshold = HOLD_ERROR_RAD
-            touching = self.config["selected"] == 28 and closing_torque > 0.4 and speed < 0.15  # torque in N·m, speed in rad/s
-
-        if closing_error <= error_threshold:
-            self.contact_trigger = None
-            self.contact_candidate_sequence = None
-            self.rumble = 0.0
-            return KP
-        if self.contact_trigger is None:
-            if not touching:
-                return KP
+            if self.feedback_sequence == self.contact_candidate_sequence:
+                return self.target
             self.contact_trigger = self.trigger_value
 
-        if not use_trigger_control:
-            return HOLD_KP
-        if self.contact_trigger >= 1.0:
-            self.rumble = self.trigger_value  # vibration amplitude (0 to 1)
-            return HOLD_KP
-        pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
-        self.rumble = TOUCH_RUMBLE + (1.0 - TOUCH_RUMBLE) * pressure  # vibration amplitude (0 to 1)
-        return SOFT_HOLD_KP + (HOLD_KP - SOFT_HOLD_KP) * pressure
+        if self.contact_trigger == 1.0:
+            pressure = self.trigger_value
+        else:
+            pressure = max(0.0, (self.trigger_value - self.contact_trigger) / (1 - self.contact_trigger))
+        self.rumble = TOUCH_RUMBLE + (1.0 - TOUCH_RUMBLE) * pressure
+        hold_torque = MIN_HOLD_TORQUE + pressure * (MAX_HOLD_TORQUE - MIN_HOLD_TORQUE)
+        lead = min(hold_torque / KP, closing_error)
+        return position + direction * lead
 
     def trigger(self, value):
         with self.lock:
@@ -191,9 +183,9 @@ class Axis:
             voltage=voltage,
             stamp_ns=status["stamp_ns"],
             control_mode="MIT",
-            kp=self.kp,
+            kp=KP,
             kd=KD,
-            target=self.target,
+            target=self.motor_target,
             requested_target=self.target,
             velocity_target=0.0,
             torque_ff=0.0,
@@ -221,7 +213,7 @@ class Axis:
             temperature=temperature,
             stamp_ns=time.monotonic_ns(),
             control_mode="MIT",
-            kp=self.kp,
+            kp=KP,
             kd=KD,
         )
         self.record.motor_state(self.config, self.telemetry)
@@ -287,7 +279,6 @@ class Motor:
             for axis in self.axes.values():
                 if axis.vr:
                     axis.vr = axis.opening = False
-                    axis.holding_vr_target = True
 
     def stop(self):
         with self.lock:
@@ -377,7 +368,6 @@ class Motor:
                 c = axis.config
                 position = axis.target if axis.target is not None else axis.telemetry["position"]
                 near_open = abs(position - c["opened"]) < abs(position - c["closed"])
-                axis.holding_vr_target = False
                 axis.contact_trigger = axis.contact_candidate_sequence = None
                 axis.rumble = 0.0
                 axis.set_trigger_target(1.0 if near_open else 0.0)
@@ -457,12 +447,12 @@ class Motor:
         for axis in active:
             axis.feedback(now)
         for axis in active:
-            axis.kp = axis.command_kp()
-        commands = [(a.config["selected"], a.target, a.kp, KD) for a in active]
+            axis.motor_target = axis.command_position()
+        commands = [(a.config["selected"], a.motor_target, KP, KD) for a in active]
         self.bus.send_mit_batch(commands)
         stamp = time.monotonic_ns()
         for axis in active:
-            self.record.motor_command(axis.config, axis.target, stamp)
+            self.record.motor_command(axis.config, axis.motor_target, stamp)
         if now >= self.voltage_next:
             axis = active[self.voltage_index % len(active)]
             self.bus.send(17, axis.config["selected"], struct.pack("<HHI", 0x701C, 0, 0))
