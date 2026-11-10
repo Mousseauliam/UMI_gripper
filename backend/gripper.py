@@ -9,7 +9,7 @@ from .utils import finite, load_json, motor_id, save_json
 KP = 2.04  # N·m/rad
 KD = 0.178571  # N·m·s/rad
 PERIOD = 0.005  # s (5 ms, 200 Hz)
-MAX_HOLD_TORQUE = 1.30  # N·m at full squeeze
+MAX_HOLD_TORQUE = 1.50  # N·m at full squeeze
 TOUCH_RUMBLE = 0.10  # vibration amplitude (0 to 1)
 HOLD_ERROR_RAD = 0.14  # rad
 TOUCHING_TORQUE = 0.15  # N·m, contact threshold and initial hold torque
