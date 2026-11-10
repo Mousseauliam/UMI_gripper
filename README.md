@@ -41,6 +41,48 @@ Entering VR opens both grippers. Release each trigger once to take control. A to
 
 USB camera order is defined in `Cameras.usb_loop` in `backend/cameras.py`; CSI splits the Camarray image into torso left/right. Check the mapping after reconnecting hardware.
 
+## From the Quest trigger to the jaws
+
+### 1. Trigger reading to requested closure
+
+WebXR reports a value between 0 (released) and 1 (fully squeezed) for each index trigger. Early in the squeeze, this reading can lag behind the physical finger travel. Both hands use the same fixed correction in `correctedTrigger` in `frontend/js/vr.js`:
+
+```text
+closure = 0.45 * raw + 0.55 * (1 - exp(-6 * raw)) / (1 - exp(-6))
+```
+
+The curve gives more closure per unit of raw input near the start and less near the end. The horizontal axis below is the reading from the Quest. The vertical axis is the corrected percentage shown in VR and sent over the control WebSocket. The Pi routes the left hand to motor 18 and the right hand to motor 28. Clicking the thumbstick freezes that hand's corrected request while the motor continues regulating the grasp. A second click resumes live input.
+
+![Raw Quest trigger reading versus corrected closure request](assets/plots/trigger-response.svg)
+
+### 2. Requested closure to motor angle
+
+The RS05 rotates a crank whose drive pin sits about 12 mm from the shaft centre. The pin moves a connecting rod, which rotates a rocker. The rocker and a second link guide the jaw. As the links change orientation, the same increment of shaft rotation produces different amounts of jaw travel along the closing axis.
+
+To compensate, `jaw_angle` in `backend/gripper.py` uses the inverse linkage curve from the STEP model. Given a fraction of desired jaw travel, it looks up the fraction of motor rotation needed to reach it. The 33 entries in `STEP_MOTOR_TRAVEL` correspond to closure values `(i / 32)^2`, concentrating samples near the open position. The code interpolates between entries and applies the saved endpoints for that motor:
+
+```text
+target_angle = open_angle + motor_fraction * (closed_angle - open_angle)
+```
+
+![Requested closure versus fraction of calibrated motor rotation](assets/plots/motor-response.svg)
+
+For example, a **30% raw trigger reading** becomes **59.5% requested closure**, which commands **67.6% of the motor's calibrated rotation** in free space. The model describes a rigid linkage. Backlash, pad compression and the accuracy of the saved endpoints affect the physical result.
+
+### 3. Motor feedback and first contact
+
+The Pi sends MIT position commands at a target rate of 200 Hz. In free space it sends the angle above with fixed gains, zero velocity target and zero feedforward torque. With a stationary shaft, requested torque is approximately `KP * (target_angle - measured_angle)`. While the shaft moves, the damping term also contributes.
+
+Contact detection uses a second geometry table, `PAD_TIP_TRAVEL_MM`. The command curve follows a reference point on the jaw; the contact table follows the tip of one pad. These points have different paths as the jaw rotates. `pad_tip_mm` converts the target and measured motor angles separately into millimetres along the closing axis. Their difference estimates how far that tip is lagging behind the request.
+
+With the current settings, contact requires all three conditions across two distinct motor feedback samples: at least **2.5 mm** of tip lag, more than **0.18 N·m** of torque in the closing direction, and motor speed at or below **0.20 rad/s** in magnitude. Contact clears when the lag falls to **1.0 mm** or less. This lower release threshold keeps small fluctuations from repeatedly switching the vibration on and off.
+
+### 4. Extra squeeze after contact
+
+The controller remembers the corrected trigger value at contact. The remaining squeeze up to 100% increases the requested holding torque linearly from **0.18 to 1.50 N·m** and vibration amplitude from **10% to 100%**. For example, if contact starts at 60%, squeezing to 80% uses half the remaining travel and requests **0.84 N·m** and **55% vibration**. If contact first occurs at full squeeze, the controller requests the maximum immediately.
+
+The controller keeps `KP` and `KD` fixed. It commands a position ahead of the measured shaft position in the closing direction by up to `hold_torque / KP` radians, capped by the remaining angle to the operator's target. This limits how hard the motor pushes against a blocked jaw. The torque shown in the interface is motor feedback. Force at the object also depends on linkage angle and where the object touches the pad.
+
 ## Recording
 
 MCAP stores independent camera frames and timestamps without forcing equal frame counts:
@@ -73,7 +115,3 @@ Configuration: `/etc/umi-git-sync.json`. The read-only deploy key is `/home/admi
 [Onshape design](https://cad.onshape.com/documents/b1fdebf4e63a57263e618c6b/w/da7161f2845b0c85eb6ef8cc/e/bb00067b4393a12e92135545)
 
 Put current STL/3MF exports in `assets/print/` and STEP exports in `assets/simulation/`. These folders are placeholders: no CAD export was supplied with the source, and older V1/V2 models have not been substituted.
-
-## Quest trigger response
-
-Both hands use the same fixed response: 45% raw input plus 55% normalized exponential response (rate 6). The VR HUD and motor command use the same corrected trigger percentage. The resulting closure request goes through the STEP linkage curve and the saved open and closed motor angles.
