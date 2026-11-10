@@ -23,17 +23,6 @@ body {
     -apple-system,
     sans-serif;
 }
-.vids {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-.vids video {
-  width: 420px;
-  max-width: 100%;
-  background: #000;
-  border-radius: 4px;
-}
 .dl {
   margin-left: 0.4rem;
   font-size: 0.85rem;
@@ -99,19 +88,6 @@ h1 {
 }
 .chip:empty {
   display: none;
-}
-.topbtn {
-  display: flex;
-  gap: 0.4rem;
-}
-.topbtn button {
-  flex: 0 0 auto;
-  padding: 0.5rem 1rem;
-  font-size: 0.95rem;
-}
-#estop {
-  font-size: 1.05rem;
-  padding: 0.55rem 1.4rem;
 }
 .msgs {
   max-width: 1280px;
@@ -184,27 +160,7 @@ h3 {
   color: var(--muted);
   font-weight: 600;
 }
-.pill {
-  padding: 0.12rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #444;
-}
-.stopped {
-  background: #4b5563;
-}
 .booting,
-.stopping {
-  background: var(--amber);
-  color: #111;
-}
-.running {
-  background: var(--green);
-}
-.hung {
-  background: var(--red);
-}
 label {
   display: block;
   font-size: 0.8rem;
@@ -222,12 +178,6 @@ select {
   background: #0f1216;
   border: 1px solid var(--line);
   border-radius: 7px;
-}
-input[type="checkbox"] {
-  display: inline;
-  width: auto;
-  margin: 0 0.3rem 0 0;
-  vertical-align: -1px;
 }
 input:disabled,
 select:disabled {
@@ -253,19 +203,6 @@ select:disabled {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.3rem;
-}
-.checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
-  font-size: 0.88rem;
-  margin: 0.1rem 0 0.5rem;
-}
-.checks label {
-  display: inline;
-  margin: 0;
-  color: var(--text);
-  font-size: 0.88rem;
 }
 button {
   flex: 1 1 8rem;
@@ -347,37 +284,10 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-td.num {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 td button {
   padding: 0.3rem 0.55rem;
   font-size: 0.78rem;
   flex: 0 0 auto;
-}
-.st-done {
-  color: #5fd38d;
-}
-.st-failed {
-  color: #ff8a7a;
-}
-.st-converting,
-.st-queued {
-  color: var(--amber);
-}
-pre {
-  background: #0c0e11;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.6rem;
-  margin: 0.3rem 0 0.6rem;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  max-height: 16rem;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 details {
   margin: 0.3rem 0;
@@ -387,18 +297,6 @@ details > summary {
   color: var(--muted);
   font-size: 0.82rem;
   padding: 0.15rem 0;
-}
-details.box {
-  background: var(--card2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
-  margin: 0.4rem 0 0.7rem;
-}
-details.box > summary {
-  color: var(--text);
-  font-weight: 600;
-  font-size: 0.9rem;
 }
 .setup {
   background: var(--card2);
@@ -456,63 +354,15 @@ details.box > summary {
   font-size: 0.78rem;
   margin: 0.35rem 0 0;
 }
-.parts {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.35rem;
-  margin: 0.4rem 0 0.6rem;
-}
-.part {
-  background: var(--card2);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.82rem;
-}
-.part.up {
-  border-color: #2e6b47;
-}
-.part b {
-  font-weight: 600;
-}
-.tabs {
-  display: flex;
-  gap: 0.3rem;
-  border-bottom: 1px solid var(--line);
-  margin: 0.6rem 0 0.4rem;
-}
-.tabs button {
-  flex: 0 0 auto;
-  background: transparent;
-  color: var(--muted);
-  border-radius: 0;
-  padding: 0.45rem 0.8rem;
-  font-size: 0.88rem;
-  border-bottom: 2px solid transparent;
-}
-.tabs button.on {
-  color: var(--text);
-  border-bottom-color: var(--blue);
-}
 .empty {
   color: var(--muted);
   font-size: 0.85rem;
   margin: 0.5rem 0;
 }
-.between {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
 @media (max-width: 640px) {
   .grid,
   .grid3 {
     grid-template-columns: 1fr;
-  }
-  .topbtn button {
-    padding: 0.5rem 0.7rem;
   }
 }
 
@@ -535,14 +385,6 @@ details.box > summary {
 }
 .metric {
   font-size: 1.3rem;
-}
-nav {
-  display: flex;
-  gap: 8px;
-}
-nav button {
-  flex: 0 0 auto;
-  padding: 0.4rem 1rem;
 }
 .hint {
   overflow-wrap: anywhere;

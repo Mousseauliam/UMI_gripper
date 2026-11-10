@@ -2,9 +2,7 @@ const $ = (id) => document.getElementById(id);
 let state = null,
   ws = null,
   tasks = null,
-  setupData = null,
-  episodes = [],
-  datasets = [];
+  setupData = null;
 const listeners = new Set();
 let clockOffset = null,
   clockBestRtt = Infinity,
@@ -301,15 +299,11 @@ function cell(row, text) {
   return td;
 }
 async function loadEpisodes() {
-  const result = await Promise.all([api("episodes"), api("datasets")]);
-  episodes = result[0];
-  datasets = result[1].datasets;
-  $("hwepsNew").replaceChildren();
-  $("hwepsDone").replaceChildren();
-  let converted = 0;
+  const episodes = await api("episodes");
+  const rows = $("episodeRows");
+  rows.replaceChildren();
+  $("noEpisodes").hidden = episodes.length > 0;
   for (const e of episodes) {
-    const sets = datasets.filter((d) => d.episodes.includes(e.id));
-    if (sets.length) converted++;
     const row = document.createElement("tr");
     const info = cell(row, e.task || "No task");
     const small = document.createElement("div");
@@ -323,7 +317,6 @@ async function loadEpisodes() {
       " MB";
     info.append(small);
     cell(row, e.recording ? "recording" : e.outcome || "not judged");
-    if (sets.length) cell(row, sets.map((d) => d.repo_id).join(", "));
     const actions = cell(row, "");
     const link = document.createElement("a");
     link.className = "dl";
@@ -339,93 +332,9 @@ async function loadEpisodes() {
       loadEpisodes();
     };
     actions.append(del);
-    $(sets.length ? "hwepsDone" : "hwepsNew").append(row);
+    rows.append(row);
   }
-  $("tabNew").textContent =
-    "To convert (" + (episodes.length - converted) + ")";
-  $("tabDone").textContent = "Converted (" + converted + ")";
-  $("tabSets").textContent = "Datasets (" + datasets.length + ")";
-  $("nohwepsNew").hidden = episodes.length > converted;
-  $("nohwepsDone").hidden = converted > 0;
-  $("hwdirs").textContent =
-    "Recordings: data/episodes · Datasets: data/datasets · Discarded: data/episodes/trash";
-  $("hwsets").replaceChildren();
-  for (const d of datasets) {
-    const row = document.createElement("tr");
-    cell(row, d.repo_id);
-    cell(row, d.format);
-    cell(row, String(d.episodes.length));
-    cell(row, d.frames + " frames");
-    $("hwsets").append(row);
-  }
-  const job = result[1].job;
-  $("cvGo").disabled = job.running;
-  $("cvJobs").textContent =
-    job.error ||
-    (job.repo
-      ? job.repo +
-        " · " +
-        job.done +
-        "/" +
-        job.total +
-        (job.running ? " converting…" : " complete")
-      : "");
-  if (document.activeElement !== $("cvGroup")) {
-    const keep = $("cvGroup").value;
-    $("cvGroup").replaceChildren(
-      new Option("any", ""),
-      ...[...new Set(episodes.map((e) => e.group).filter(Boolean))].map(
-        (g) => new Option(g, g),
-      ),
-    );
-    $("cvGroup").value = keep;
-  }
-  preview();
 }
-function options() {
-  return {
-    repo: $("hwrepo").value.trim(),
-    format: $("cvFormat").value,
-    frame: $("cvFrame").value,
-    raw: $("cvRaw").checked,
-    group: $("cvGroup").value,
-    session: $("cvSession").value.trim(),
-    outcomes: [
-      ["cvOk", "success"],
-      ["cvFail", "fail"],
-      ["cvNone", "not judged"],
-    ]
-      .filter(([id]) => $(id).checked)
-      .map(([, v]) => v),
-  };
-}
-function preview() {
-  const o = options();
-  const count = episodes.filter(
-    (e) =>
-      !e.recording &&
-      o.outcomes.includes(e.outcome || "not judged") &&
-      (!o.group || e.group === o.group) &&
-      (!o.session || e.session === o.session),
-  ).length;
-  $("cvPreview").textContent =
-    count + " episode(s) match · local conversion · raw gripper angles";
-}
-for (const id of ["tabNew", "tabDone", "tabSets"])
-  $(id).onclick = () => {
-    for (const other of ["tabNew", "tabDone", "tabSets"]) {
-      $(other).classList.toggle("on", id === other);
-      $($(other).dataset.tab).hidden = id !== other;
-    }
-  };
-$("cvGo").onclick = async () => {
-  await act("convert", options());
-  loadEpisodes();
-};
-$("cvFrame").value = "raw";
-$("cvRaw").disabled = true;
-for (const id of ["cvOk", "cvFail", "cvNone", "cvGroup", "cvSession"])
-  $(id).onchange = preview;
 Promise.all([loadTasks(), loadSetup(), loadEpisodes()]).catch((e) =>
   message(e.message),
 );

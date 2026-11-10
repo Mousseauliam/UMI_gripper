@@ -12,7 +12,6 @@ Two RS05 grippers, four Pi cameras and Quest teleoperation, with MCAP recording.
 | `backend/canbus.py` | RS05 CAN messages through the USB CANable serial adapter |
 | `backend/cameras.py` | USB/CSI capture, preview and H.264 encoding |
 | `backend/recording.py` | MCAP messages and episode lifecycle |
-| `backend/export.py` | Optional LeRobot and GR00T dataset exports |
 | `backend/utils.py` | Paths, environment settings, JSON persistence and input checks |
 | `frontend/index.html`, `frontend/css/style.css` | Page structure and appearance |
 | `frontend/js/app.js` | Gripper, Recording and Robot Episode interface |
@@ -32,7 +31,7 @@ python3 -m venv .venv
 
 Open `http://<pi-ip>:8080`. Quest WebXR needs a secure context: place a certificate trusted by the headset at `data/tls/cert.pem` and its key at `data/tls/key.pem`, then use `https://<pi-host>:8443`.
 
-`UMI_DATA_DIR`, `UMI_HTTP_PORT` and `UMI_HTTPS_PORT` override the default data directory and ports. The first start copies defaults from `config/` into `data/`. Calibrations, TLS keys, episodes and exports stay in `data/`, excluded from Git. No previous calibration or recording is included.
+`UMI_DATA_DIR`, `UMI_HTTP_PORT` and `UMI_HTTPS_PORT` override the default data directory and ports. The first start copies defaults from `config/` into `data/`. Calibrations, TLS keys and episodes stay in `data/`, excluded from Git. No previous calibration or recording is included.
 
 ## Grippers and VR
 
@@ -53,7 +52,7 @@ MCAP stores independent camera frames and timestamps without forcing equal frame
 - `/gripper/state`, `/gripper/record`, `/gripper/telemetry`: gripper state and measurements.
 - `/origin/episode`, `/umi/events`: episode metadata and events.
 
-The wire schemas are in `backend/schemas.json`. Dataset exports resample separately; they do not change the source MCAP. Missing camera streams are reported in episode metadata.
+The wire schemas are in `backend/schemas.json`. Missing camera streams are reported in episode metadata.
 
 ## Git updates on the Pi
 

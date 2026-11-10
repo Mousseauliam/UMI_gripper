@@ -10,7 +10,6 @@ from PIL import Image
 from .cameras import Cameras
 from .gripper import KD, KP, PERIOD, Motor
 from .recording import Recorder
-from .export import Converter
 
 from .utils import DATA_DIR, prepare_data
 from .utils import load_json, save_json
@@ -20,7 +19,6 @@ class App:
     def __init__(self):
         prepare_data()
         self.recorder = Recorder(DATA_DIR / "episodes")
-        self.converter = Converter(DATA_DIR / "datasets", self.recorder)
         self.motor = Motor(DATA_DIR / "settings.json", self.recorder)
         self.cameras = Cameras(self.recorder)
         self.tasks = load_json(DATA_DIR / "tasks.json")
@@ -65,10 +63,6 @@ class App:
             return web.json_response(self.setup)
         if path == "episodes":
             return web.json_response(self.recorder.episodes())
-        if path == "datasets":
-            return web.json_response(
-                {"datasets": self.converter.datasets(), "job": self.converter.job}
-            )
         raise web.HTTPNotFound()
 
     async def action(self, r):
@@ -96,10 +90,6 @@ class App:
                 await asyncio.to_thread(self.recorder.stop, "discard")
             elif path == "episode/discard":
                 await asyncio.to_thread(self.recorder.discard, d["id"])
-            elif path == "convert":
-                if self.recorder.active:
-                    raise ValueError("Stop recording before conversion")
-                self.converter.start(d)
             elif path == "tasks/add":
                 task = " ".join(d["task"].split())[:300]
                 if not task:

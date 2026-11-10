@@ -147,152 +147,18 @@
             &#10007;, B held 2 seconds = not judged. A: show/hide right camera ·
             X: show/hide left camera.
           </p>
-          <details id="recAdv" hidden>
-            <summary>advanced</summary>
-            <div class="grid">
-              <label>Repo id <input id="repo" maxlength="129" /></label>
-              <label
-                >Episode id
-                <input
-                  id="episode"
-                  maxlength="128"
-                  placeholder="auto: UTC stamp + world"
-              /></label>
-            </div>
-            <dl id="reckv"></dl>
-          </details>
         </section>
       </div>
       <div class="col">
         <section class="card" id="hwlib">
           <h2>Robot episodes</h2>
-          <details id="convBox" class="box" open>
-            <summary>Convert to a dataset</summary>
-            <div class="grid" style="margin-top: 0.5rem">
-              <label
-                >Dataset (owner/name)
-                <input id="hwrepo" maxlength="129" list="hwrepos" /><datalist
-                  id="hwrepos"
-                ></datalist
-              ></label>
-              <label
-                >Format
-                <select id="cvFormat">
-                  <option value="lerobot_v3">
-                    LeRobot v3 (π0 / π0.5, SmolVLA, ACT ...)
-                  </option>
-                  <option value="gr00t_v2">
-                    GR00T (LeRobot v2.1 + modality.json)
-                  </option>
-                </select></label
-              >
-            </div>
-            <div class="checks">
-              <span class="muted" style="font-size: 0.8rem">outcome:</span>
-              <label><input type="checkbox" id="cvOk" checked />success</label>
-              <label><input type="checkbox" id="cvFail" />fail</label>
-              <label><input type="checkbox" id="cvNone" />not judged</label>
-            </div>
-            <details>
-              <summary>more filters and options</summary>
-              <div class="grid" style="margin-top: 0.4rem">
-                <label
-                  >Group
-                  <select id="cvGroup">
-                    <option value="">any</option>
-                  </select></label
-                >
-                <label
-                  >Session
-                  <input
-                    id="cvSession"
-                    maxlength="40"
-                    placeholder="any (or a session id)"
-                /></label>
-                <label
-                  >Joint frame
-                  <select id="cvFrame">
-                    <option value="urdf">URDF angles (default)</option>
-                    <option value="raw">raw motor angles</option>
-                  </select></label
-                >
-                <label style="align-self: end"
-                  ><input type="checkbox" id="cvRaw" />add raw-angle twins
-                  (LeRobot v3)</label
-                >
-              </div>
-            </details>
-            <div class="between" style="margin-top: 0.4rem">
-              <div
-                id="cvPreview"
-                class="muted"
-                style="font-size: 0.88rem; flex: 1 1 16rem"
-              ></div>
-              <button
-                id="cvGo"
-                class="go"
-                style="flex: 0 0 auto; padding: 0.6rem 1.6rem"
-              >
-                Convert
-              </button>
-            </div>
-            <div
-              id="cvJobs"
-              style="font-size: 0.85rem; margin-top: 0.3rem"
-            ></div>
-          </details>
-          <div class="tabs">
-            <button id="tabNew" class="on" data-tab="paneNew">
-              To convert
-            </button>
-            <button id="tabDone" data-tab="paneDone">Converted</button
-            ><button id="tabSets" data-tab="paneSets">Datasets</button>
-          </div>
-          <div id="paneNew">
-            <table>
-              <thead>
-                <tr>
-                  <th>episode</th>
-                  <th>outcome</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="hwepsNew"></tbody>
-            </table>
-            <div id="nohwepsNew" class="empty">nothing waiting</div>
-          </div>
-          <div id="paneDone" hidden>
-            <table>
-              <thead>
-                <tr>
-                  <th>episode</th>
-                  <th>outcome</th>
-                  <th>in datasets</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="hwepsDone"></tbody>
-            </table>
-            <div id="nohwepsDone" class="empty">none yet</div>
-          </div>
-          <div id="paneSets" hidden>
-            <table>
-              <thead>
-                <tr>
-                  <th>dataset</th>
-                  <th>format</th>
-                  <th>episodes</th>
-                  <th>size</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="hwsets"></tbody>
-            </table>
-          </div>
-          <details>
-            <summary>storage</summary>
-            <div id="hwdirs" class="hint"></div>
-          </details>
+          <table>
+            <thead>
+              <tr><th>Episode</th><th>Outcome</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="episodeRows"></tbody>
+          </table>
+          <div id="noEpisodes" class="empty" hidden>No episodes recorded.</div>
         </section>
         <section class="card">
           <h2>Cameras</h2>
