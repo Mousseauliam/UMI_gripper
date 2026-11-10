@@ -57,7 +57,7 @@ else
     function lockGuideStrength(raw, target) {
       if (!Number.isFinite(raw) || raw <= 0.01) return 0;
       const distance = Math.abs(correctedTrigger(raw) - target);
-      return 0.6 * Math.max(0, 1 - distance / 0.08);
+      return 0.6 * Math.max(0, 1 - distance / 0.10);
     }
 
     function triggerCommand(source, willSend) {
