@@ -1,91 +1,69 @@
 (() => {
-  let capture = null,
-    video = null,
-    uploading = false,
-    cameraWS = null,
-    cameraSequence = 0;
-  let lastCapture = 0,
-    lastMediaTime = -1,
-    sentAt = 0,
-    lastVideoMeta = null;
-  let encoder = null, forceKey = true, lastKey = 0, recordedEpisode = null;
-  let encodingMode = "JPEG", lastEncodedAt = 0;
-  function useJPEG(reason) {
-    if (encoder && encoder.state !== "closed") encoder.close();
-    encoder = null;
-    uploading = false;
-    encodingMode = "JPEG fallback";
-    if (ws?.readyState === 1) send({ type: "diagnostic", message: "Quest encoder: " + reason });
+  let capture = null, video = null, worker = null, uploading = false;
+  let cameraWS = null, cameraSequence = 0, recordedEpisode = null;
+  let lastCapture = 0, lastMediaTime = -1, lastVideoMeta = null;
+  let forceKey = true, encodingMode = "Starting encoder";
+  function diagnostic(message) {
+    $("questStatus").textContent = message;
+    if (ws?.readyState === 1) send({ type: "diagnostic", message });
   }
-  async function configureEncoder() {
-    if (!window.VideoEncoder || !window.VideoFrame) return;
-    const config = {
-      codec: "avc1.42E01E", width: 640,
-      height: Math.round(video.videoHeight / video.videoWidth * 320) * 2,
-      bitrate: 2000000, framerate: 15, latencyMode: "realtime",
-      hardwareAcceleration: "prefer-hardware", avc: { format: "annexb" },
+  function startWorker() {
+    if (!window.Worker || !window.VideoFrame)
+      throw Error("Camera encoding requires Worker and VideoFrame support");
+    worker = new Worker("/static/js/quest_encoder.js");
+    const current = worker;
+    worker.onmessage = ({ data }) => {
+      if (worker !== current) return;
+      if (data.type === "status") {
+        encodingMode = data.mode;
+        diagnostic("Quest encoder: " + data.mode);
+        return;
+      }
+      uploading = false;
+      if (data.error) { diagnostic(data.error); return; }
+      if (!capture || cameraWS?.readyState !== 1) { forceKey = true; return; }
+      const header = data.h264 ? 28 : 16;
+      const packet = new ArrayBuffer(header + data.bytes.byteLength);
+      const view = new DataView(packet);
+      view.setFloat64(0, data.stamp, true);
+      view.setBigUint64(8, BigInt(++cameraSequence), true);
+      if (data.h264) {
+        new Uint8Array(packet, 16, 4).set([72, 50, 54, 52]);
+        view.setUint32(20, data.width, true);
+        view.setUint32(24, data.height, true);
+      }
+      new Uint8Array(packet, header).set(new Uint8Array(data.bytes));
+      cameraWS.send(packet);
     };
-    try {
-      const result = await VideoEncoder.isConfigSupported(config);
-      if (!result.supported) { useJPEG("H.264 configuration unsupported"); return; }
-      encoder = new VideoEncoder({
-        output(chunk) {
-          lastEncodedAt = performance.now();
-          if (!capture || cameraWS?.readyState !== 1) { uploading = false; forceKey = true; return; }
-          const data = new Uint8Array(chunk.byteLength);
-          chunk.copyTo(data);
-          sendFrame(data, chunk.timestamp / 1000, true);
-        },
-        error(error) { useJPEG(error.message); },
-      });
-      encoder.configure(config);
-      encodingMode = "H.264 on Quest";
-      lastEncodedAt = performance.now();
-      forceKey = true;
-    } catch (error) { useJPEG(error.message); }
-  }
-  function sendFrame(data, stamp, h264 = false) {
-    const offset = h264 ? 28 : 16;
-    const packet = new ArrayBuffer(offset + data.byteLength);
-    const view = new DataView(packet);
-    view.setFloat64(0, stamp, true);
-    view.setBigUint64(8, BigInt(++cameraSequence), true);
-    if (h264) {
-      new Uint8Array(packet, 16, 4).set([72, 50, 54, 52]);
-      view.setUint32(20, canvas.width, true);
-      view.setUint32(24, canvas.height, true);
-    }
-    new Uint8Array(packet, offset).set(data);
-    cameraWS.send(packet);
+    worker.onerror = (event) => {
+      uploading = false;
+      diagnostic("Quest encoder worker failed: " + event.message);
+      current.terminate();
+      if (worker === current) worker = null;
+    };
   }
   function connectCamera() {
     forceKey = true;
     cameraWS = new WebSocket(
       (location.protocol === "https:" ? "wss://" : "ws://") +
-        location.host +
-        "/camera-ws",
+      location.host + "/camera-ws",
     );
     const socket = cameraWS;
-    cameraWS.onmessage = (e) => {
+    cameraWS.onmessage = ({ data }) => {
       if (cameraWS !== socket) return;
-      uploading = false;
-      const d = JSON.parse(e.data);
-      if (d.error && encoder) useJPEG(d.error);
-      if (d.episode !== recordedEpisode) {
-        recordedEpisode = d.episode;
+      const result = JSON.parse(data);
+      if (result.error) {
+        worker?.postMessage({ type: "jpeg" });
+        diagnostic(result.error);
+        return;
+      }
+      if (result.episode !== recordedEpisode) {
+        recordedEpisode = result.episode;
         forceKey = true;
       }
       $("questStatus").textContent =
-        d.error ||
-        "Quest : " +
-          d.sequence +
-          " frames sent · " + encodingMode + " · network " +
-          d.transport_ms.toFixed(0) +
-          " ms";
-    };
-    cameraWS.onclose = () => {
-      if (cameraWS !== socket) return;
-      uploading = false;
+        "Quest: " + result.sequence + " frames sent · " + encodingMode +
+        " · network " + result.transport_ms.toFixed(0) + " ms";
     };
   }
   function watchVideo(now, metadata) {
@@ -99,8 +77,8 @@
       if (capture) {
         capture.getTracks().forEach((t) => t.stop());
         capture = null;
-        if (encoder && encoder.state !== "closed") encoder.close();
-        encoder = null;
+        worker?.terminate();
+        worker = null;
         uploading = false;
         cameraWS?.close();
         $("questCamera").textContent = "Enable Quest camera";
@@ -135,13 +113,15 @@
       await video.play();
       lastMediaTime = -1;
       lastVideoMeta = null;
-      await configureEncoder();
+      startWorker();
       connectCamera();
       if (video.requestVideoFrameCallback)
         video.requestVideoFrameCallback(watchVideo);
       $("questCamera").textContent = "Disable Quest camera";
       $("questStatus").textContent = "External Quest camera active";
     } catch (e) {
+      worker?.terminate();
+      worker = null;
       if (capture) {
         capture.getTracks().forEach((t) => t.stop());
         capture = null;
@@ -169,70 +149,34 @@
         send({ type: "diagnostic", message: $("questStatus").textContent });
     }
   };
-  const canvas = document.createElement("canvas"),
-    ctx = canvas.getContext("2d");
   window.captureTick = function () {
     const now = performance.now();
-    if (!capture || !video?.videoWidth || clockOffset === null) return;
-    if (encoder && now - lastEncodedAt > 3000) useJPEG("No encoded frame for 3 seconds");
-    if (uploading && now - sentAt > 1500) {
-      if (encoder) useJPEG("Encoder or transfer timed out");
-      cameraWS?.close();
-      uploading = false;
-      connectCamera();
-      return;
-    }
-    if (!cameraWS || cameraWS.readyState === 3) {
-      connectCamera();
-      return;
-    }
-    if (
-      uploading ||
-      (encoder && encoder.encodeQueueSize >= 2) ||
-      cameraWS.bufferedAmount > 500000 ||
-      cameraWS.readyState !== 1 ||
-      now - lastCapture < 66 ||
-      video.currentTime === lastMediaTime
-    )
-      return;
+    if (!capture || !worker || !video?.videoWidth || clockOffset === null) return;
+    if (!cameraWS || cameraWS.readyState === 3) { connectCamera(); return; }
+    if (uploading || cameraWS.readyState !== 1 ||
+        cameraWS.bufferedAmount > 500000 || now - lastCapture < 66 ||
+        video.currentTime === lastMediaTime) return;
     try {
-      canvas.width = 640;
-      canvas.height =
-        Math.round(((video.videoHeight / video.videoWidth) * 640) / 2) * 2;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const stamp =
-        lastVideoMeta &&
+      const stamp = lastVideoMeta &&
         Math.abs(lastVideoMeta.mediaTime - video.currentTime) < 0.03 &&
-        Number.isFinite(lastVideoMeta.captureTime)
-          ? lastVideoMeta.captureTime
-          : now;
-      uploading = !encoder;
-      sentAt = now;
+        Number.isFinite(lastVideoMeta.captureTime) ? lastVideoMeta.captureTime : now;
+      const timestamp = stamp + clockOffset;
+      const frame = new VideoFrame(video, { timestamp: Math.round(timestamp * 1000) });
+      uploading = true;
+      try {
+        worker.postMessage({ type: "frame", frame, stamp: timestamp, key: forceKey }, [frame]);
+      } finally {
+        frame.close();
+      }
+      forceKey = false;
       lastCapture = now;
       lastMediaTime = video.currentTime;
-      const timestamp = stamp + clockOffset;
-      if (encoder) {
-        const frame = new VideoFrame(canvas, { timestamp: Math.round(timestamp * 1000) });
-        const keyFrame = forceKey || now - lastKey >= 1000;
-        try { encoder.encode(frame, { keyFrame }); }
-        finally { frame.close(); }
-        if (keyFrame) { forceKey = false; lastKey = now; }
-      } else {
-        const jpeg = atob(canvas.toDataURL("image/jpeg", 0.8).split(",")[1]);
-        const data = new Uint8Array(jpeg.length);
-        for (let i = 0; i < jpeg.length; i++) data[i] = jpeg.charCodeAt(i);
-        sendFrame(data, timestamp);
-      }
-    } catch (e) {
-      if (encoder) useJPEG(e.message);
+    } catch (error) {
       uploading = false;
-      $("questStatus").textContent = e.message;
+      diagnostic(error.message);
     }
   };
   setInterval(() => {
-    if (!window.isVRActive()) {
-      syncClock();
-      captureTick();
-    }
+    if (!window.isVRActive()) { syncClock(); captureTick(); }
   }, 67);
 })();
