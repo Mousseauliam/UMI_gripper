@@ -1,5 +1,6 @@
 let canvas, ctx, encoder = null, jpegOnly = false, lastKey = 0;
 let output = null, encoderError = null;
+let jpegRequested = false;
 
 function fallback(reason) {
   if (encoder && encoder.state !== "closed") encoder.close();
@@ -36,10 +37,11 @@ async function setup(width, height) {
 }
 
 self.onmessage = async ({ data }) => {
-  if (data.type === "jpeg") { fallback("server rejected H.264"); return; }
+  if (data.type === "jpeg") { jpegRequested = true; return; }
   const frame = data.frame;
   let timer;
   try {
+    if (jpegRequested) { fallback("server rejected H.264"); jpegRequested = false; }
     const width = 640, height = Math.round(frame.displayHeight / frame.displayWidth * 320) * 2;
     if (!canvas || canvas.width !== width || canvas.height !== height) {
       if (encoder && encoder.state !== "closed") encoder.close();
@@ -73,7 +75,7 @@ self.onmessage = async ({ data }) => {
       const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.8 });
       bytes = await blob.arrayBuffer();
     }
-    postMessage({ bytes, h264, stamp: data.stamp, width, height }, [bytes]);
+    postMessage({ bytes, h264, stamp: data.stamp, submittedAt: data.submittedAt, width, height }, [bytes]);
   } catch (error) {
     postMessage({ error: "Quest encoding failed: " + error.message });
   } finally {

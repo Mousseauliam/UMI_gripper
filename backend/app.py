@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import struct
 import math
+import re
 import time
 from aiohttp import web, WSMsgType
 from PIL import Image
@@ -240,6 +241,8 @@ class App:
         async for msg in ws:
             if msg.type != WSMsgType.BINARY:
                 continue
+            sequence = None
+            error_code = "packet"
             try:
                 if len(msg.data) < 17:
                     raise ValueError("Invalid frame")
@@ -248,8 +251,11 @@ class App:
                     raise ValueError("Invalid timestamp")
                 stamp = round(milliseconds * 1e6)
                 received = time.monotonic_ns()
-                if not -100_000_000 <= received - stamp <= 2_000_000_000:
+                error_code = "stale"
+                if not -100_000_000 <= received - stamp <= 500_000_000:
+                    quest_video = None
                     raise ValueError("Camera clock out of sync or frame too old")
+                error_code = "codec"
                 image = msg.data[16:]
                 if image[:4] == b"H264":
                     if len(image) <= 12:
@@ -258,6 +264,12 @@ class App:
                     if not (0 < width <= 1920 and 0 < height <= 1920):
                         raise ValueError("Invalid video dimensions")
                     if quest_video is None:
+                        types = {m.group(1)[0] & 31 for m in re.finditer(
+                            b"\x00\x00\x01(.)", image[12:], re.S
+                        )}
+                        if not {5, 7, 8} <= types:
+                            error_code = "keyframe"
+                            raise ValueError("Waiting for a fresh H.264 keyframe")
                         quest_video = QuestVideo(self.cameras.items["quest"])
                     await asyncio.to_thread(
                         quest_video.publish, image[12:], stamp, sequence, width, height
@@ -284,7 +296,7 @@ class App:
                      "episode": self.recorder.episode if self.recorder.active else None}
                 )
             except Exception as exc:
-                await ws.send_json({"error": str(exc)})
+                await ws.send_json({"error": str(exc), "code": error_code, "sequence": sequence})
         return ws
 
     async def download(self, r):

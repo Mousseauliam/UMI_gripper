@@ -72,11 +72,13 @@ MCAP stores independent camera frames and timestamps without forcing equal frame
 
 The wire schemas are in `backend/schemas.json`. Missing camera streams are reported in episode metadata.
 
-### Quest encoding
+### Quest encoding and latency
 
-The camera client probes WebCodecs for H.264 Baseline Annex B at 640 pixels wide, preserving the aspect ratio, with a 2 Mbit/s target and a 15 fps capture limit. It requests hardware acceleration and realtime encoding. The Pi writes the encoded frames into the existing MCAP video schema with their original timestamps. It decodes the stream for validation and refreshes the JPEG preview at 2 fps. Each new recording requests a keyframe; periodic keyframes are also requested every second.
+A dedicated worker performs H.264 encoding or JPEG fallback, keeping image compression off the VR thread. H.264 uses Annex B, 640 pixels wide with the original aspect ratio, a 2 Mbit/s target and a 15 fps capture limit. The Pi stores the existing MCAP video messages and timestamps, decodes for validation and updates the Quest JPEG preview at 2 fps.
 
-If the browser rejects the configuration or encoding/transfer fails, capture falls back to JPEG transfer and H.264 encoding on the Pi. Camera status reports the selected path. A synthetic six-frame stream passed the Pi decoding and MCAP round-trip check. Quest hardware support, sustained capture rate and image quality require an on-headset recording test.
+Control samples are sent at up to 50 Hz without waiting for the previous acknowledgement. Socket buffering limits further sends when the network is congested. The motor loop continues targeting 200 Hz using the latest received request.
+
+The camera allows at most two unacknowledged frames. Encoded results older than 350 ms are skipped before transmission; the server rejects frames older than 500 ms. Dropping a frame requests a fresh keyframe to restore H.264 decoding. Stale-frame errors do not switch codecs. These limits favour recent frames during congestion and may reduce recorded frame counts. Rejected frames remain absent from the recording, preserving their original timestamps instead of assigning new capture times.
 
 ## Git updates on the Pi
 

@@ -82,7 +82,7 @@ else
       viewer = null,
       frameName = "local-floor";
     let ready = false,
-      pending = false,
+      lastControlSent = 0,
       starting = false,
       seq = 0,
       lastFrame = 0;
@@ -293,7 +293,7 @@ else
       triggerLocks.clear();
       session = null;
       ready = false;
-      pending = false;
+      lastControlSent = 0;
       starting = false;
       framesStarted = false;
       if (ws?.readyState === 1) {
@@ -336,7 +336,7 @@ else
         ready = true;
         starting = false;
       }
-      if (d.type === "ack" && d.seq === seq) pending = false;
+
       if (d.type === "error" && session) finish(d.error);
     });
     function frame(time, xrFrame) {
@@ -370,9 +370,11 @@ else
         }
         if (!ready) return;
         buttons(right.gamepad, left?.gamepad, time);
-        const triggers = { right: triggerCommand(right, !pending) };
-        triggers.left = triggerCommand(left, !pending);
-        if (pending) return;
+        const canSend = ws?.readyState === 1 && ws.bufferedAmount < 8192 &&
+          performance.now() - lastControlSent >= 20;
+        const triggers = { right: triggerCommand(right, canSend) };
+        triggers.left = triggerCommand(left, canSend);
+        if (!canSend) return;
         const hands = {};
         for (const source of session.inputSources) {
           if (!source.gripSpace) continue;
@@ -396,7 +398,7 @@ else
           },
           controllers: hands,
         });
-        pending = true;
+        lastControlSent = performance.now();
       } catch (e) {
         finish(e.message);
       } finally {
@@ -457,7 +459,8 @@ else
         session.addEventListener("end", () => {
           if (session) finish();
         });
-        ready = pending = starting = false;
+        ready = starting = false;
+        lastControlSent = 0;
         recordButtons.reset();
         cameraVisible.left = cameraVisible.right = false;
         cameraPressed.left = cameraPressed.right = true;

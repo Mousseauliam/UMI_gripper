@@ -2,6 +2,7 @@
   let capture = null, video = null, worker = null, uploading = false;
   let cameraWS = null, cameraSequence = 0, recordedEpisode = null;
   let lastCapture = 0, lastMediaTime = -1, lastVideoMeta = null;
+  const awaiting = new Map();
   let forceKey = true, encodingMode = "Starting encoder";
   function diagnostic(message) {
     $("questStatus").textContent = message;
@@ -21,6 +22,10 @@
       }
       uploading = false;
       if (data.error) { diagnostic(data.error); return; }
+      if (performance.now() - data.submittedAt > 350) {
+        forceKey = true;
+        return;
+      }
       if (!capture || cameraWS?.readyState !== 1) { forceKey = true; return; }
       const header = data.h264 ? 28 : 16;
       const packet = new ArrayBuffer(header + data.bytes.byteLength);
@@ -34,6 +39,7 @@
       }
       new Uint8Array(packet, header).set(new Uint8Array(data.bytes));
       cameraWS.send(packet);
+      awaiting.set(cameraSequence, performance.now());
     };
     worker.onerror = (event) => {
       uploading = false;
@@ -44,6 +50,7 @@
   }
   function connectCamera() {
     forceKey = true;
+    awaiting.clear();
     cameraWS = new WebSocket(
       (location.protocol === "https:" ? "wss://" : "ws://") +
       location.host + "/camera-ws",
@@ -52,8 +59,14 @@
     cameraWS.onmessage = ({ data }) => {
       if (cameraWS !== socket) return;
       const result = JSON.parse(data);
+      if (result.sequence !== undefined) {
+        for (const sequence of awaiting.keys()) {
+          if (sequence <= result.sequence) awaiting.delete(sequence);
+        }
+      }
       if (result.error) {
-        worker?.postMessage({ type: "jpeg" });
+        if (result.code === "codec") worker?.postMessage({ type: "jpeg" });
+        forceKey = true;
         diagnostic(result.error);
         return;
       }
@@ -153,8 +166,13 @@
     const now = performance.now();
     if (!capture || !worker || !video?.videoWidth || clockOffset === null) return;
     if (!cameraWS || cameraWS.readyState === 3) { connectCamera(); return; }
-    if (uploading || cameraWS.readyState !== 1 ||
-        cameraWS.bufferedAmount > 500000 || now - lastCapture < 66 ||
+    if (awaiting.size && now - awaiting.values().next().value > 1500) {
+      cameraWS.close();
+      connectCamera();
+      return;
+    }
+    if (uploading || awaiting.size >= 2 || cameraWS.readyState !== 1 ||
+        cameraWS.bufferedAmount > 64000 || now - lastCapture < 66 ||
         video.currentTime === lastMediaTime) return;
     try {
       const stamp = lastVideoMeta &&
@@ -164,7 +182,7 @@
       const frame = new VideoFrame(video, { timestamp: Math.round(timestamp * 1000) });
       uploading = true;
       try {
-        worker.postMessage({ type: "frame", frame, stamp: timestamp, key: forceKey }, [frame]);
+        worker.postMessage({ type: "frame", frame, stamp: timestamp, submittedAt: now, key: forceKey }, [frame]);
       } finally {
         frame.close();
       }
