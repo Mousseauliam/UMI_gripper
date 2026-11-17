@@ -7,7 +7,7 @@ import math
 import time
 from aiohttp import web, WSMsgType
 from PIL import Image
-from .cameras import Cameras
+from .cameras import Cameras, QuestVideo
 from .gripper import KD, KP, PERIOD, Motor
 from .recording import Recorder
 
@@ -236,6 +236,7 @@ class App:
             raise web.HTTPForbidden()
         ws = web.WebSocketResponse(max_msg_size=1_500_000)
         await ws.prepare(r)
+        quest_video = None
         async for msg in ws:
             if msg.type != WSMsgType.BINARY:
                 continue
@@ -250,11 +251,23 @@ class App:
                 if not -100_000_000 <= received - stamp <= 2_000_000_000:
                     raise ValueError("Camera clock out of sync or frame too old")
                 image = msg.data[16:]
-                with Image.open(io.BytesIO(image)) as im:
-                    if im.format != "JPEG" or max(im.size) > 1920:
-                        raise ValueError("Invalid JPEG")
-                    im.verify()
-                await asyncio.to_thread(self.cameras.items["quest"].publish, image, stamp)
+                if image[:4] == b"H264":
+                    if len(image) <= 12:
+                        raise ValueError("Invalid H.264 packet")
+                    width, height = struct.unpack_from("<II", image, 4)
+                    if not (0 < width <= 1920 and 0 < height <= 1920):
+                        raise ValueError("Invalid video dimensions")
+                    if quest_video is None:
+                        quest_video = QuestVideo(self.cameras.items["quest"])
+                    await asyncio.to_thread(
+                        quest_video.publish, image[12:], stamp, sequence, width, height
+                    )
+                else:
+                    with Image.open(io.BytesIO(image)) as im:
+                        if im.format != "JPEG" or max(im.size) > 1920:
+                            raise ValueError("Invalid JPEG")
+                        im.verify()
+                    await asyncio.to_thread(self.cameras.items["quest"].publish, image, stamp)
                 self.recorder.json(
                     "/umi/events",
                     dict(
@@ -267,7 +280,8 @@ class App:
                     stamp,
                 )
                 await ws.send_json(
-                    {"ok": True, "sequence": sequence, "transport_ms": (received - stamp) / 1e6}
+                    {"ok": True, "sequence": sequence, "transport_ms": (received - stamp) / 1e6,
+                     "episode": self.recorder.episode if self.recorder.active else None}
                 )
             except Exception as exc:
                 await ws.send_json({"error": str(exc)})

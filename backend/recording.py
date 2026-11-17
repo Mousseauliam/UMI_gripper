@@ -31,7 +31,8 @@ class Recorder:
         self.stream_stats = {}
         self.motor_values = {}
         self.motor_targets = {}
-        self.jobs = queue.Queue(maxsize=512)
+        self.jobs = queue.Queue(maxsize=2048)
+        self.dropped = collections.Counter()
         self.worker = threading.Thread(target=self._write, daemon=True)
         self.worker.start()
 
@@ -40,6 +41,7 @@ class Recorder:
             if self.active:
                 return self.state()
             self.error = ""
+            self.dropped.clear()
             self.counts.clear()
             self.sequences.clear()
             self.video_ready.clear()
@@ -49,7 +51,7 @@ class Recorder:
             self.started = time.monotonic_ns()
             self.anchor = time.time_ns() - self.started
             self.file = (self.root / (self.episode + ".mcap")).open("xb")
-            self.writer = Writer(self.file, compression=CompressionType.ZSTD)
+            self.writer = Writer(self.file, compression=CompressionType.NONE)
             self.writer.start(profile="origin", library="umi-gripper/1")
             self.channels = {}
             for topic in [
@@ -144,6 +146,7 @@ class Recorder:
                     stat["last_ns"] = stamp
                     stat["count"] += 1
             except queue.Full:
+                self.dropped[topic] += 1
                 self.error = "Recording too slow: data lost"
 
     def json(self, topic, data, stamp=None):
@@ -254,6 +257,7 @@ class Recorder:
                 stream_stats=json.dumps(self.stream_stats),
                 data_complete=str(not missing and not discontinuous and not self.error).lower(),
                 error=self.error,
+                dropped_messages=json.dumps(self.dropped),
             )
             metadata.update({"count/" + k.lstrip("/"): str(v) for k, v in self.counts.items()})
             self.writer.add_metadata("origin/episode_end", metadata)
@@ -272,6 +276,8 @@ class Recorder:
                 episode=getattr(self, "episode", ""),
                 duration_s=(time.monotonic_ns() - self.started) / 1e9 if self.active else 0,
                 counts=dict(self.counts),
+                queued_messages=self.jobs.qsize(),
+                dropped_messages=dict(self.dropped),
                 last=self.last,
                 error=self.error,
             )

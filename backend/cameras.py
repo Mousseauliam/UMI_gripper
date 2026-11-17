@@ -104,6 +104,37 @@ class Encoder:
             pass
 
 
+class QuestVideo:
+    def __init__(self, camera):
+        import av
+        self.camera = camera
+        self.decoder = av.CodecContext.create("h264", "r")
+        self.decoder.thread_count = 1
+        self.preview_at = 0
+
+    def publish(self, data, stamp, sequence, width, height):
+        import av
+        types = {m.group(1)[0] & 31 for m in re.finditer(b"\x00\x00\x01(.)", data, re.S)}
+        flags = int(5 in types) | (2 if {7, 8} <= types else 0)
+        frames = self.decoder.decode(av.Packet(data))
+        if len(frames) != 1 or (frames[0].width, frames[0].height) != (width, height):
+            raise ValueError("Expected one H.264 frame with matching dimensions")
+        self.camera.recorder.video(TOPICS["quest"], sequence, stamp, width, height, data, flags)
+        now = time.monotonic()
+        with self.camera.condition:
+            self.camera.width, self.camera.height = width, height
+            self.camera.sequence += 1
+            self.camera.updated = now
+            self.camera.error = ""
+            self.camera.encoded += 1
+            if now - self.preview_at >= 0.5:
+                out = io.BytesIO()
+                frames[0].to_image().save(out, "JPEG", quality=80)
+                self.camera.frame = out.getvalue()
+                self.preview_at = now
+                self.camera.condition.notify_all()
+
+
 class Camera:
     def __init__(self, name, recorder):
         self.name, self.recorder = name, recorder
