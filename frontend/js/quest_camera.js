@@ -9,7 +9,7 @@
     sentAt = 0,
     lastVideoMeta = null;
   let encoder = null, forceKey = true, lastKey = 0, recordedEpisode = null;
-  let encodingMode = "JPEG";
+  let encodingMode = "JPEG", lastEncodedAt = 0;
   function useJPEG(reason) {
     if (encoder && encoder.state !== "closed") encoder.close();
     encoder = null;
@@ -30,6 +30,7 @@
       if (!result.supported) { useJPEG("H.264 configuration unsupported"); return; }
       encoder = new VideoEncoder({
         output(chunk) {
+          lastEncodedAt = performance.now();
           if (!capture || cameraWS?.readyState !== 1) { uploading = false; forceKey = true; return; }
           const data = new Uint8Array(chunk.byteLength);
           chunk.copyTo(data);
@@ -39,6 +40,7 @@
       });
       encoder.configure(config);
       encodingMode = "H.264 on Quest";
+      lastEncodedAt = performance.now();
       forceKey = true;
     } catch (error) { useJPEG(error.message); }
   }
@@ -172,6 +174,7 @@
   window.captureTick = function () {
     const now = performance.now();
     if (!capture || !video?.videoWidth || clockOffset === null) return;
+    if (encoder && now - lastEncodedAt > 3000) useJPEG("No encoded frame for 3 seconds");
     if (uploading && now - sentAt > 1500) {
       if (encoder) useJPEG("Encoder or transfer timed out");
       cameraWS?.close();
@@ -185,6 +188,8 @@
     }
     if (
       uploading ||
+      (encoder && encoder.encodeQueueSize >= 2) ||
+      cameraWS.bufferedAmount > 500000 ||
       cameraWS.readyState !== 1 ||
       now - lastCapture < 66 ||
       video.currentTime === lastMediaTime
@@ -201,7 +206,7 @@
         Number.isFinite(lastVideoMeta.captureTime)
           ? lastVideoMeta.captureTime
           : now;
-      uploading = true;
+      uploading = !encoder;
       sentAt = now;
       lastCapture = now;
       lastMediaTime = video.currentTime;
@@ -213,18 +218,10 @@
         finally { frame.close(); }
         if (keyFrame) { forceKey = false; lastKey = now; }
       } else {
-        const socket = cameraWS;
-        canvas.toBlob(async (blob) => {
-          try {
-            if (!blob) throw Error("JPEG encoding failed");
-            const data = new Uint8Array(await blob.arrayBuffer());
-            if (!capture || cameraWS !== socket || socket.readyState !== 1) return;
-            sendFrame(data, timestamp);
-          } catch (error) {
-            uploading = false;
-            $("questStatus").textContent = error.message;
-          }
-        }, "image/jpeg", 0.8);
+        const jpeg = atob(canvas.toDataURL("image/jpeg", 0.8).split(",")[1]);
+        const data = new Uint8Array(jpeg.length);
+        for (let i = 0; i < jpeg.length; i++) data[i] = jpeg.charCodeAt(i);
+        sendFrame(data, timestamp);
       }
     } catch (e) {
       if (encoder) useJPEG(e.message);

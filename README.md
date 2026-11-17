@@ -76,7 +76,7 @@ The wire schemas are in `backend/schemas.json`. Missing camera streams are repor
 
 The camera client probes WebCodecs for H.264 Baseline Annex B at 640 pixels wide, preserving the aspect ratio, with a 2 Mbit/s target and a 15 fps capture limit. It requests hardware acceleration and realtime encoding. The Pi writes the encoded frames into the existing MCAP video schema with their original timestamps. It decodes the stream for validation and refreshes the JPEG preview at 2 fps. Each new recording requests a keyframe; periodic keyframes are also requested every second.
 
-If the browser rejects the configuration or encoding/transfer fails, capture falls back to asynchronous JPEG transfer and H.264 encoding on the Pi. Camera status reports the selected path. A synthetic six-frame stream passed the Pi decoding and MCAP round-trip check. Quest hardware support, sustained capture rate and image quality require an on-headset recording test.
+If the browser rejects the configuration or encoding/transfer fails, capture falls back to JPEG transfer and H.264 encoding on the Pi. Camera status reports the selected path. A synthetic six-frame stream passed the Pi decoding and MCAP round-trip check. Quest hardware support, sustained capture rate and image quality require an on-headset recording test.
 
 ## Git updates on the Pi
 
