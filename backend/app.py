@@ -1,14 +1,9 @@
 import asyncio
-import io
 import json
 from pathlib import Path
-import struct
-import math
-import re
 import time
 from aiohttp import web, WSMsgType
-from PIL import Image
-from .cameras import Cameras, QuestVideo
+from .cameras import Cameras
 from .gripper import KD, KP, PERIOD, Motor
 from .recording import Recorder
 
@@ -229,74 +224,6 @@ class App:
                     await asyncio.to_thread(
                         self.recorder.stop, "not judged", "VR disconnected", "system"
                     )
-        return ws
-
-    async def camera_socket(self, r):
-        origin = r.headers.get("Origin")
-        if origin and origin != str(r.url.origin()):
-            raise web.HTTPForbidden()
-        ws = web.WebSocketResponse(max_msg_size=1_500_000)
-        await ws.prepare(r)
-        quest_video = None
-        async for msg in ws:
-            if msg.type != WSMsgType.BINARY:
-                continue
-            sequence = None
-            error_code = "packet"
-            try:
-                if len(msg.data) < 17:
-                    raise ValueError("Invalid frame")
-                milliseconds, sequence = struct.unpack_from("<dQ", msg.data)
-                if not math.isfinite(milliseconds):
-                    raise ValueError("Invalid timestamp")
-                stamp = round(milliseconds * 1e6)
-                received = time.monotonic_ns()
-                error_code = "stale"
-                if not -100_000_000 <= received - stamp <= 500_000_000:
-                    quest_video = None
-                    raise ValueError("Camera clock out of sync or frame too old")
-                error_code = "codec"
-                image = msg.data[16:]
-                if image[:4] == b"H264":
-                    if len(image) <= 12:
-                        raise ValueError("Invalid H.264 packet")
-                    width, height = struct.unpack_from("<II", image, 4)
-                    if not (0 < width <= 1920 and 0 < height <= 1920):
-                        raise ValueError("Invalid video dimensions")
-                    if quest_video is None:
-                        types = {m.group(1)[0] & 31 for m in re.finditer(
-                            b"\x00\x00\x01(.)", image[12:], re.S
-                        )}
-                        if not {5, 7, 8} <= types:
-                            error_code = "keyframe"
-                            raise ValueError("Waiting for a fresh H.264 keyframe")
-                        quest_video = QuestVideo(self.cameras.items["quest"])
-                    await asyncio.to_thread(
-                        quest_video.publish, image[12:], stamp, sequence, width, height
-                    )
-                else:
-                    with Image.open(io.BytesIO(image)) as im:
-                        if im.format != "JPEG" or max(im.size) > 1920:
-                            raise ValueError("Invalid JPEG")
-                        im.verify()
-                    await asyncio.to_thread(self.cameras.items["quest"].publish, image, stamp)
-                self.recorder.json(
-                    "/umi/events",
-                    dict(
-                        type="quest_frame",
-                        sequence=sequence,
-                        stamp_ns=stamp,
-                        received_ns=received,
-                        transport_ms=(received - stamp) / 1e6,
-                    ),
-                    stamp,
-                )
-                await ws.send_json(
-                    {"ok": True, "sequence": sequence, "transport_ms": (received - stamp) / 1e6,
-                     "episode": self.recorder.episode if self.recorder.active else None}
-                )
-            except Exception as exc:
-                await ws.send_json({"error": str(exc), "code": error_code, "sequence": sequence})
         return ws
 
     async def download(self, r):

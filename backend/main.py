@@ -15,7 +15,6 @@ def create_app(state=None):
     app.router.add_post("/api/{path:.*}", state.action)
     app.router.add_get("/camera/{name}.mjpg", state.stream)
     app.router.add_get("/ws", state.websocket)
-    app.router.add_get("/camera-ws", state.camera_socket)
     app.router.add_get("/episodes/{name}", state.download)
 
     async def index(request):

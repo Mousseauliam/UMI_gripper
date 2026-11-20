@@ -82,7 +82,7 @@ else
       viewer = null,
       frameName = "local-floor";
     let ready = false,
-      lastControlSent = 0,
+      pending = false,
       starting = false,
       seq = 0,
       lastFrame = 0;
@@ -293,7 +293,7 @@ else
       triggerLocks.clear();
       session = null;
       ready = false;
-      lastControlSent = 0;
+      pending = false;
       starting = false;
       framesStarted = false;
       if (ws?.readyState === 1) {
@@ -336,7 +336,7 @@ else
         ready = true;
         starting = false;
       }
-
+      if (d.type === "ack" && d.seq === seq) pending = false;
       if (d.type === "error" && session) finish(d.error);
     });
     function frame(time, xrFrame) {
@@ -370,11 +370,9 @@ else
         }
         if (!ready) return;
         buttons(right.gamepad, left?.gamepad, time);
-        const canSend = ws?.readyState === 1 && ws.bufferedAmount < 8192 &&
-          performance.now() - lastControlSent >= 20;
-        const triggers = { right: triggerCommand(right, canSend) };
-        triggers.left = triggerCommand(left, canSend);
-        if (!canSend) return;
+        const triggers = { right: triggerCommand(right, !pending) };
+        triggers.left = triggerCommand(left, !pending);
+        if (pending) return;
         const hands = {};
         for (const source of session.inputSources) {
           if (!source.gripSpace) continue;
@@ -398,14 +396,13 @@ else
           },
           controllers: hands,
         });
-        lastControlSent = performance.now();
+        pending = true;
       } catch (e) {
         finish(e.message);
       } finally {
         if (session && pose && session.visibilityState === "visible") {
           try {
             draw(pose);
-            captureTick();
           } catch (e) {
             finish(e.message);
           }
@@ -459,8 +456,7 @@ else
         session.addEventListener("end", () => {
           if (session) finish();
         });
-        ready = starting = false;
-        lastControlSent = 0;
+        ready = pending = starting = false;
         recordButtons.reset();
         cameraVisible.left = cameraVisible.right = false;
         cameraPressed.left = cameraPressed.right = true;

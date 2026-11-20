@@ -16,7 +16,6 @@ Two RS05 grippers, four Pi cameras and Quest teleoperation, with MCAP recording.
 | `frontend/index.html`, `frontend/css/style.css` | Page structure and appearance |
 | `frontend/js/app.js` | Gripper, Recording and Robot Episode interface |
 | `frontend/js/vr.js` | Passthrough, panels, controller poses, triggers and recording buttons |
-| `frontend/js/quest_camera.js` | Quest camera capture and transfer |
 | `deploy/git_sync.py` | Pi-only Git updater |
 
 ## Run manually on the Pi
@@ -61,24 +60,17 @@ closure = 0.45 * raw + 0.55 * (1 - exp(-6 * raw)) / (1 - exp(-6))
 
 ## Recording
 
+This version uses the control and recording implementation from commit `0962e5d`, with Quest camera capture removed. It records the four Pi cameras, Quest poses and gripper data in MCAP.
+
 MCAP stores independent camera frames and timestamps without forcing equal frame counts:
 
 - `/cam/wrist_left`, `/cam/wrist_right`: wrist video.
 - `/cam/head_stereo/left`, `/cam/head_stereo/right`: torso video (Origin topic names).
-- `/cam/quest`: Quest video when camera capture is available and enabled.
 - `/quest/poses`: headset/controller poses, including world and head-relative data.
 - `/gripper/state`, `/gripper/record`, `/gripper/telemetry`: gripper state and measurements.
 - `/origin/episode`, `/umi/events`: episode metadata and events.
 
 The wire schemas are in `backend/schemas.json`. Missing camera streams are reported in episode metadata.
-
-### Quest encoding and latency
-
-A dedicated worker performs H.264 encoding or JPEG fallback, keeping image compression off the VR thread. H.264 uses Annex B, 640 pixels wide with the original aspect ratio, a 2 Mbit/s target and a 15 fps capture limit. The Pi stores the existing MCAP video messages and timestamps, decodes for validation and updates the Quest JPEG preview at 2 fps.
-
-Control samples are sent at up to 50 Hz without waiting for the previous acknowledgement. Socket buffering limits further sends when the network is congested. The motor loop continues targeting 200 Hz using the latest received request.
-
-The camera allows at most two unacknowledged frames. Encoded results older than 350 ms are skipped before transmission; the server rejects frames older than 500 ms. Dropping a frame requests a fresh keyframe to restore H.264 decoding. Stale-frame errors do not switch codecs. These limits favour recent frames during congestion and may reduce recorded frame counts. Rejected frames remain absent from the recording, preserving their original timestamps instead of assigning new capture times.
 
 ## Git updates on the Pi
 
